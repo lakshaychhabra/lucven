@@ -2,3 +2,34 @@ baseURL = "https://lucven.com/"
 languageCode = "en-us"
 title = "Lucven"
 theme = "PaperMod"
+
+[params]
+  env = "production"
+  description = "Lucven blog"
+  author = "Lucven"
+  # allow visitors to switch between light and dark themes
+  defaultTheme = "auto"
+  disableThemeToggle = false
+  ShowReadingTime = true
+  ShowShareButtons = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowToc = true
+
+  [params.homeInfoParams]
+    Title = "Lucven"
+    Content = "Welcome to my blog"
+
+[menu]
+  [[menu.main]]
+    identifier = "archives"
+    name = "Archive"
+    url = "/archives/"
+    weight = 10
+
+  [[menu.main]]
+    identifier = "search"
+    name = "Search"
+    url = "/search/"
+    weight = 20
