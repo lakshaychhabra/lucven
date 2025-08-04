@@ -57,9 +57,10 @@
     {{- end }}
   </footer>
 
-  {{- if (.Param "comments") }}
+  {{- if (and (.Site.Params.comments.enabled) (or (.Params.comments) (not (isset .Params "comments"))) ) }}
   {{- partial "comments.html" . }}
-  {{- end }}
+{{- end }}
+
 </article>
 
 {{- end }}{{/* end main */}}

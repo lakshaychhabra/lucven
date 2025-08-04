@@ -1,6 +1,6 @@
 baseURL = "https://lucven.com/"
 languageCode = "en-us"
-title = "Lucven AI Blog"
+title = "Lucven AI Systems"
 theme = "PaperMod"
 
 [outputs]
@@ -31,6 +31,11 @@ theme = "PaperMod"
   ShowBreadCrumbs = true
   disableSpecial1stPost = false
   displayFullLangName = true
+  
+  [params.comments]
+    enabled = true
+    provider = "giscus"
+
 
   [params.assets]
     favicon = "favicon_io/favicon.ico"
@@ -106,3 +111,20 @@ theme = "PaperMod"
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+
+
+
+
+[giscus]
+  repo = "lakshaychhabra/lucven-comments"
+  repoID = "R_kgDOPYOEYw"
+  category = "Q&A"
+  categoryID = "DIC_kwDOPYOEY84CtxWt"
+  mapping = "pathname"
+  strict = "0"
+  reactionsEnabled = "1"
+  emitMetadata = "0"
+  inputPosition = "top"
+  theme = "preferred_color_scheme"
+  lang = "en"
+  loading = "lazy"
