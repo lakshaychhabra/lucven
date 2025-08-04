@@ -40,7 +40,7 @@ theme = "PaperMod"
     image = "images/og-image.png"
 
   [params.profileMode]
-    enabled = true
+    enabled = false
     title = "Lakshay Chhabra"
     subtitle = "ML Engineer | RAG Specialist | AI Infra"
     imageUrl = "images/dp.png"
@@ -66,3 +66,43 @@ theme = "PaperMod"
 [[params.socialIcons]]
   name = "linkedin"
   url = "https://linkedin.com/in/lakshaychhabra123"
+
+[[menu.main]]
+  name = "Home"
+  url = "/"
+  weight = 1
+
+[[menu.main]]
+  name = "Posts"
+  url = "/posts/"
+  weight = 2
+
+[[menu.main]]
+  name = "Tags"
+  url = "/tags/"
+  weight = 3
+
+[[menu.main]]
+  name = "Categories"
+  url = "/categories/"
+  weight = 4
+
+[[menu.main]]
+  name = "Archives"
+  url = "/archives/"
+  weight = 5
+
+[[menu.main]]
+  name = "Search"
+  url = "/search/"
+  weight = 6
+
+[[menu.main]]
+  name = "About"
+  url = "/about/"
+  weight = 7
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
