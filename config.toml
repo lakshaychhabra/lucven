@@ -3,11 +3,9 @@ languageCode = "en-us"
 title = "Lucven AI Blog"
 theme = "PaperMod"
 
-# Enable RSS and JSON for SEO/discovery
 [outputs]
-  home = ["HTML", "RSS", "JSON"]
+  home = ["HTML", "RSS", "JSON"]  # Enables local search
 
-# Set up pagination
 [pagination]
   pagerSize = 10
 
@@ -15,18 +13,25 @@ theme = "PaperMod"
   name = "Lakshay Chhabra"
   homepage = "https://lucven.com"
 
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
 [params]
   env = "production"
   description = "Exploring Retrieval-Augmented Generation (RAG), Machine Learning systems, and scalable AI infra."
   author = "Lakshay Chhabra"
-  defaultTheme = "auto"
+  defaultTheme = "dark"
   ShowShareButtons = true
   ShowReadingTime = true
   ShowCodeCopyButtons = true
+  ShowSearch = true  # 🔥 Enables Fuse.js search
+  ShowToc = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
   disableSpecial1stPost = false
   displayFullLangName = true
 
-  # Site-wide image assets
   [params.assets]
     favicon = "favicon_io/favicon.ico"
     disableFingerprinting = false
@@ -34,7 +39,6 @@ theme = "PaperMod"
   [params.opengraph]
     image = "images/og-image.png"
 
-  # Profile Mode Homepage
   [params.profileMode]
     enabled = true
     title = "Lakshay Chhabra"
@@ -42,35 +46,23 @@ theme = "PaperMod"
     imageUrl = "images/dp.png"
     imageTitle = "Lucven Logo"
     buttons = [
-      { name = "Blog", url = "/posts" },
-      { name = "GitHub", url = "https://github.com/lakshaychhabra" },
-      { name = "LinkedIn", url = "https://linkedin.com/in/lakshaychhabra123" }
+      { name = "Articles", url = "/posts" },
+      { name = "Tags", url = "/tags" },
+      { name = "Categories", url = "/categories" },
+      { name = "Archives", url = "/archives" },
+      { name = "Search", url = "/search" },
     ]
 
-  # Optional but useful — edit if you enable analytics
   [params.analytics]
     googleAnalyticsID = ""
 
-  # SEO meta tags
   [params.meta]
     keywords = ["AI", "Machine Learning", "RAG", "LLMs", "AI Infra", "Quant Trading", "Lakshay Chhabra"]
 
-  # Socials
-  [[params.socialIcons]]
-    name = "github"
-    url = "https://github.com/lakshaychhabra"
+[[params.socialIcons]]
+  name = "github"
+  url = "https://github.com/lakshaychhabra"
 
-  [[params.socialIcons]]
-    name = "linkedin"
-    url = "https://linkedin.com/in/lakshaychhabra123"
-
-
-# Tags and Categories
-[taxonomies]
-  category = "categories"
-  tag = "tags"
-
-# Code highlighting
-[markup]
-  [markup.highlight]
-    noClasses = false
+[[params.socialIcons]]
+  name = "linkedin"
+  url = "https://linkedin.com/in/lakshaychhabra123"
