@@ -1,7 +1,19 @@
 baseURL = "https://lucven.com/"
 languageCode = "en-us"
-title = "Lucven"
+title = "Lucven AI Blog"
 theme = "PaperMod"
+
+# Enable RSS and JSON for SEO/discovery
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+
+# Set up pagination
+[pagination]
+  pagerSize = 10
+
+[author]
+  name = "Lakshay Chhabra"
+  homepage = "https://lucven.com"
 
 [params]
   env = "production"
@@ -14,17 +26,36 @@ theme = "PaperMod"
   disableSpecial1stPost = false
   displayFullLangName = true
 
+  # Site-wide image assets
+  [params.assets]
+    favicon = "favicon_io/favicon.ico"
+    disableFingerprinting = false
+
+  [params.opengraph]
+    image = "images/og-image.png"
+
+  # Profile Mode Homepage
   [params.profileMode]
     enabled = true
     title = "Lakshay Chhabra"
     subtitle = "ML Engineer | RAG Specialist | AI Infra"
-    imageUrl = "images/tn.png"
-    imageTitle = "lucven"
+    imageUrl = "images/dp.png"
+    imageTitle = "Lucven Logo"
     buttons = [
       { name = "Blog", url = "/posts" },
-      { name = "GitHub", url = "https://github.com/lakshaychhabra" }
+      { name = "GitHub", url = "https://github.com/lakshaychhabra" },
+      { name = "LinkedIn", url = "https://linkedin.com/in/lakshaychhabra123" }
     ]
 
+  # Optional but useful — edit if you enable analytics
+  [params.analytics]
+    googleAnalyticsID = ""
+
+  # SEO meta tags
+  [params.meta]
+    keywords = ["AI", "Machine Learning", "RAG", "LLMs", "AI Infra", "Quant Trading", "Lakshay Chhabra"]
+
+  # Socials
   [[params.socialIcons]]
     name = "github"
     url = "https://github.com/lakshaychhabra"
@@ -33,9 +64,13 @@ theme = "PaperMod"
     name = "linkedin"
     url = "https://linkedin.com/in/lakshaychhabra123"
 
-[pagination]
-  pagerSize = 10
 
+# Tags and Categories
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
+# Code highlighting
 [markup]
   [markup.highlight]
     noClasses = false
