@@ -1,0 +1,4 @@
+baseURL = "https://lucven.com/"
+languageCode = "en-us"
+title = "Lucven"
+theme = "PaperMod"
