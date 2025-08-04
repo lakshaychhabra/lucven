@@ -1,0 +1,41 @@
+baseURL = "https://lucven.com/"
+languageCode = "en-us"
+title = "Lucven"
+theme = "PaperMod"
+
+[params]
+  env = "production"
+  description = "Exploring Retrieval-Augmented Generation (RAG), Machine Learning systems, and scalable AI infra."
+  author = "Lakshay Chhabra"
+  defaultTheme = "auto"
+  ShowShareButtons = true
+  ShowReadingTime = true
+  ShowCodeCopyButtons = true
+  disableSpecial1stPost = false
+  displayFullLangName = true
+
+  [params.profileMode]
+    enabled = true
+    title = "Lakshay Chhabra"
+    subtitle = "ML Engineer | RAG Specialist | AI Infra"
+    imageUrl = "images/tn.png"
+    imageTitle = "lucven"
+    buttons = [
+      { name = "Blog", url = "/posts" },
+      { name = "GitHub", url = "https://github.com/lakshaychhabra" }
+    ]
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/lakshaychhabra"
+
+  [[params.socialIcons]]
+    name = "linkedin"
+    url = "https://linkedin.com/in/lakshaychhabra123"
+
+[pagination]
+  pagerSize = 10
+
+[markup]
+  [markup.highlight]
+    noClasses = false
