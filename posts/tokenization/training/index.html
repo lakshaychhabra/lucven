@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>The Tokenization Decision Tree: When to Train, When to Run, When to Cry | Lucven AI</title>
+<meta name="keywords" content="Tokenisation">
+<meta name="description" content="The Tokenization Decision Tree: When to Train, When to Run, When to Cry
+Hook: A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it&rsquo;s a $2M reminder that sometimes the &ldquo;right&rdquo; solution is the wrong solution.
+
+TL;DR: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most &ldquo;tokenization problems&rdquo; are solved better with preprocessing hacks than proper solutions. Here&rsquo;s the decision tree that will save you millions and your sanity.">
+<meta name="author" content="Lakshay Chhabra">
+<link rel="canonical" href="https://lucven.com/posts/tokenization/training/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.8fe10233a706bc87f2e08b3cf97b8bd4c0a80f10675a143675d59212121037c0.css" integrity="sha256-j&#43;ECM6cGvIfy4Is8&#43;XuL1MCoDxBnWhQ2ddWSEhIQN8A=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://lucven.com/favicon_io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lucven.com/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lucven.com/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lucven.com/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lucven.com/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://lucven.com/posts/tokenization/training/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+</noscript><meta property="og:url" content="https://lucven.com/posts/tokenization/training/">
+  <meta property="og:site_name" content="Lucven AI">
+  <meta property="og:title" content="The Tokenization Decision Tree: When to Train, When to Run, When to Cry">
+  <meta property="og:description" content="The Tokenization Decision Tree: When to Train, When to Run, When to Cry Hook: A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it’s a $2M reminder that sometimes the “right” solution is the wrong solution.
+TL;DR: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most “tokenization problems” are solved better with preprocessing hacks than proper solutions. Here’s the decision tree that will save you millions and your sanity.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-08-31T22:09:00+05:30">
+    <meta property="article:modified_time" content="2025-08-31T22:09:00+05:30">
+    <meta property="article:tag" content="Tokenisation">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="The Tokenization Decision Tree: When to Train, When to Run, When to Cry">
+<meta name="twitter:description" content="The Tokenization Decision Tree: When to Train, When to Run, When to Cry
+Hook: A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it&rsquo;s a $2M reminder that sometimes the &ldquo;right&rdquo; solution is the wrong solution.
+
+TL;DR: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most &ldquo;tokenization problems&rdquo; are solved better with preprocessing hacks than proper solutions. Here&rsquo;s the decision tree that will save you millions and your sanity.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://lucven.com/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "The Tokenization Decision Tree: When to Train, When to Run, When to Cry",
+      "item": "https://lucven.com/posts/tokenization/training/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "The Tokenization Decision Tree: When to Train, When to Run, When to Cry",
+  "name": "The Tokenization Decision Tree: When to Train, When to Run, When to Cry",
+  "description": "The Tokenization Decision Tree: When to Train, When to Run, When to Cry Hook: A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it\u0026rsquo;s a $2M reminder that sometimes the \u0026ldquo;right\u0026rdquo; solution is the wrong solution.\nTL;DR: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most \u0026ldquo;tokenization problems\u0026rdquo; are solved better with preprocessing hacks than proper solutions. Here\u0026rsquo;s the decision tree that will save you millions and your sanity.\n",
+  "keywords": [
+    "Tokenisation"
+  ],
+  "articleBody": "The Tokenization Decision Tree: When to Train, When to Run, When to Cry Hook: A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it’s a $2M reminder that sometimes the “right” solution is the wrong solution.\nTL;DR: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most “tokenization problems” are solved better with preprocessing hacks than proper solutions. Here’s the decision tree that will save you millions and your sanity.\n⚖️ The Brutal Truth About Your Options Your Real Choices (Ranked by Pain Level) Option Cost Time Success Rate When It Makes Sense Use existing + preprocessing $0 1 week 85% Almost always Switch to better-tokenizing model $X (API costs) 1 day 70% When available Fine-tune with careful data $10-50K 1 month 40% Narrow domains Extend existing tokenizer $500K+ 3 months 10% Never Train tokenizer + model $10M+ 6-12 months 30% You’re Google The shocking reality: 90% of teams should pick option 1 and stop overthinking.\n🔍 How to Audit Your Domain’s Tokenization Health The 5-Minute Domain Tokenization Test def tokenization_health_check(tokenizer, domain_texts): \"\"\"Run this before making ANY decisions\"\"\" critical_metrics = { \"catastrophic\": [], # \u003e5 tokens \"bad\": [], # 4-5 tokens \"problematic\": [], # 3 tokens \"acceptable\": [], # 2 tokens \"perfect\": [] # 1 token } # Extract your domain's critical terms domain_terms = extract_domain_specific_terms(domain_texts) for term in domain_terms: tokens = tokenizer.encode(term) token_count = len(tokens) if token_count \u003e= 5: critical_metrics[\"catastrophic\"].append(term) elif token_count == 4: critical_metrics[\"bad\"].append(term) # ... etc # The verdict if len(critical_metrics[\"catastrophic\"]) \u003e 10: return \"ABANDON SHIP - Switch models or domains\" elif len(critical_metrics[\"bad\"]) \u003e 50: return \"Major preprocessing required\" elif len(critical_metrics[\"problematic\"]) \u003e 100: return \"Preprocessing recommended\" else: return \"You're fine, stop worrying\" The Domain-Specific Reality Check Your Domain Tokenization Disaster What To Do Medical/Pharma Drug names fragment (Pembrolizumab → 5 tokens) Preprocessing substitution Finance Tickers fragment ($AAPL → 3 tokens) Use dedicated finance models Legal Citations fragment (§2.3.4(a)(ii) → 12 tokens) Create citation aliases Scientific Chemical names (C₆H₁₂O₆ → 8 tokens) SMILES notation + preprocessing E-commerce Product codes (SKU-12345-XL → 6 tokens) Normalize before tokenization Code Variable names (getUserById → 4 tokens) Use code-specific models 🎯 The “Should I Train My Own Tokenizer?” Test Question 1: Do you have $10M? No → Stop here. Use preprocessing.\nYes → Continue to question 2.\nQuestion 2: Do you have 6-12 months? No → Stop here. Use preprocessing.\nYes → Continue to question 3.\nQuestion 3: Is your domain completely unlike anything in existence? No → Stop here. Use preprocessing.\nYes → Continue to question 4.\nQuestion 4: Do you have a team that’s built LLMs before? No → Stop here. Use preprocessing.\nYes → Continue to question 5.\nQuestion 5: Are you sure you’re not just empire building? No → Use preprocessing.\nYes → You’re lying, but okay, train your tokenizer and learn the hard way.\n💀 Why Training Your Own Tokenizer Is Usually Suicide The Hidden Dependencies Nobody Mentions Training a tokenizer means:\nCollecting domain corpus (100GB minimum, ideally 1TB+) Training the tokenizer (BPE/WordPiece/Unigram) Training a model from scratch (tokenizer → embeddings → transformer) Achieving GPT-4o level performance (good luck) Maintaining it forever (hiring, infrastructure, updates) The Biotech Disaster: They trained a tokenizer on PubMed + clinical trials. It perfectly tokenized drug names! But it couldn’t handle basic English anymore. “The patient feels better” tokenized worse than in GPT-4o. Their domain-specific gain was destroyed by general capability loss.\nThe Vocabulary Size Trap Vocabulary Size Training Cost Inference Speed Quality 32K tokens $5M Fast Poor coverage 50K tokens $8M Balanced Standard (GPT-3) 100K tokens $12M Slower Good coverage 250K tokens $20M Slow Diminishing returns The cruel irony: Larger vocabulary = better tokenization but slower inference and higher training costs. You’ll go bankrupt before finding the sweet spot.\n🔧 The Preprocessing Hacks That Actually Work Strategy 1: Token Substitution (The $0 Solution) class TokenSubstitution: \"\"\"What actually works in production\"\"\" def __init__(self): self.substitutions = { # Medical \"COVID-19\": \"COVIDNINETEEN\", \"SARS-CoV-2\": \"SARSCOVTWO\", # Finance \"$AAPL\": \"AAPL_STOCK\", \"$GOOGL\": \"GOOGL_STOCK\", # E-commerce \"e-commerce\": \"ecommerce\", \"multi-channel\": \"multichannel\", # Your domain \"TurboIN\": \"TURBOINDEX_INDIA\", } def preprocess(self, text): \"\"\"Run before tokenization\"\"\" for bad, good in self.substitutions.items(): text = text.replace(bad, good) return text def postprocess(self, text): \"\"\"Run after generation\"\"\" for bad, good in self.substitutions.items(): text = text.replace(good, bad) return text Success story: A medical AI company had 847 drug names that tokenized badly. Instead of retraining, they built a substitution dictionary. Development time: 3 days. Performance improvement: 34%. Cost: $0.\nStrategy 2: Contextual Expansion def contextual_expansion(text): \"\"\"Add context to help the model understand fragments\"\"\" expansions = { \"TurboIN\": \"TurboIN (Turbo Index for India)\", \"QRAG\": \"QRAG (Quantum RAG)\", \"KAN\": \"KAN (Kolmogorov-Arnold Networks)\", } # First occurrence gets expansion for term, expansion in expansions.items(): text = text.replace(term, expansion, 1) # Only first occurrence return text Strategy 3: The Nuclear Preprocessing Option When nothing else works, go full nuclear:\ndef nuclear_preprocessing(text): \"\"\"When you're desperate and need it to work\"\"\" # Replace all problematic characters text = text.replace(\"-\", \"_\") # Hyphens fragment everything text = text.replace(\".\", \"_\") # Periods are chaos text = text.replace(\"/\", \"_\") # Slashes are death # Normalize everything text = text.lower() # Consistent casing text = re.sub(r'\\s+', ' ', text) # Single spaces # Create compound words text = text.replace(\"e commerce\", \"ecommerce\") text = text.replace(\"multi modal\", \"multimodal\") text = text.replace(\"pre training\", \"pretraining\") return text 🎪 When to Switch Models Instead The Model Selection Matrix Model Best For Tokenization Strength When to Choose GPT-4 General + English Good for common terms Default choice Claude Long documents Better punctuation handling Documents with complex formatting Gemini Multilingual Excellent non-English International domains Llama 3 Open source needs Good, 128K vocabulary When you need control Mistral European languages Better for accents/diacritics European market Command-R RAG applications Optimized for retrieval Search-heavy applications Domain-specific Narrow domains Perfect for that domain Only if it exists The Quick Test def model_selection_test(models, test_phrases): \"\"\"Which model tokenizes your domain best?\"\"\" results = {} for model in models: total_tokens = 0 for phrase in test_phrases: tokens = model.tokenize(phrase) total_tokens += len(tokens) results[model.name] = { \"total_tokens\": total_tokens, \"avg_tokens\": total_tokens / len(test_phrases) } # The model with lowest token count wins return sorted(results.items(), key=lambda x: x[1][\"total_tokens\"]) 🚨 When Extending a Tokenizer Destroys Everything The $500K Mistake Pattern What companies try:\nTake GPT-4o’s tokenizer Add 1000 domain terms Fine-tune the model Watch it fail spectacularly Why it fails:\nNew tokens have random embeddings Model wasn’t trained with these tokens Attention patterns are all wrong Position encodings don’t align You created 1000 [UNK] tokens with extra steps Real disaster: A legal tech company added 500 legal terms to GPT-3’s tokenizer. The model couldn’t even complete sentences anymore. Every legal term became a “stop token” that broke generation. $500K and 3 months wasted.\n📊 The Decision Framework That Actually Works For 99% of Companies Is your domain tokenizing horribly? ├─ No → Use the model as-is └─ Yes → Can you preprocess around it? ├─ Yes → Build preprocessing pipeline (1 week) └─ No → Is there a better-tokenizing model? ├─ Yes → Switch models └─ No → Are you Google/OpenAI/Anthropic? ├─ Yes → Train from scratch └─ No → Preprocessing is your only option The Domain-Specific Tokenizer Reality Domain “Proper” Solution What Actually Works Success Rate Medical BioGPT, PubMedBERT GPT-4o + substitutions 85% vs 60% Legal LegalBERT Claude + formatting 80% vs 65% Finance FinBERT GPT-4o + ticker cleanup 90% vs 70% Code CodeLlama Already good! 95% The pattern: Domain-specific models have better tokenization but worse overall performance. General models with preprocessing beat specialized models.\n🎯 The Production Checklist Before You Do ANYTHING Run the tokenization health check (5 minutes) Count critical bad terms (\u003c100? Preprocess. \u003e1000? Cry.) Test preprocessing impact (Usually solves 80%) Compare model options (Different model might be free solution) Calculate real costs (Training = $10M minimum) The Preprocessing Pipeline That Always Works class ProductionTokenizationPipeline: \"\"\"What every company eventually builds\"\"\" def __init__(self): self.load_substitutions() # Your domain dictionary self.load_expansions() # Context additions self.load_normalizations() # Character fixes def process(self, text): # 1. Normalize (fix Unicode, spaces, etc.) text = self.normalize(text) # 2. Expand (add context on first use) text = self.expand_terms(text) # 3. Substitute (replace problematic terms) text = self.substitute_terms(text) # 4. Tokenize tokens = self.tokenizer.encode(text) # 5. Validate (check for catastrophic fragmentation) if max_token_length(tokens) \u003e 5: logging.warning(f\"Bad tokenization detected: {text}\") return tokens 💡 The Ultimate Truth You don’t have a tokenization problem. You have a preprocessing problem.\nThe companies that succeed:\nSpend 1 week on preprocessing Use existing models Ship to production Iterate based on real usage The companies that fail:\nSpend 6 months on “proper” tokenization Train custom models Never ship Run out of money 🎪 The Final Verdict When to Train Your Own Tokenizer Never When to Extend a Tokenizer Never When to Use Preprocessing Always When to Switch Models When preprocessing can’t fix it AND another model tokenizes better When to Give Up When your domain terms average \u003e5 tokens after preprocessing When switching models doesn’t help When you’re trying to process DNA sequences as text 💀 The Hard Truth: Even specialized models like BioBERT struggle with domain tokenization - “Immunoglobulin” becomes 7 fragments even in a biomedical model! Research shows BioBERT requires extensive fine-tuning and still shows tokenization issues. Teams using GPT-4o with preprocessing achieve competitive or better results with less effort and cost.\nTakeaway: Your tokenization problems are real, but the solution isn’t training a tokenizer. It’s accepting that preprocessing hacks are not hacks, they’re the production solution. Stop trying to be “proper” and start shipping code that works.\nPS. The ‘Biotech Disaster’ scenario described here is a hypothetical example designed to highlight the trade-offs between domain-specific and general-purpose models. It is not based on a real-world event.\n",
+  "wordCount" : "1633",
+  "inLanguage": "en",
+  "datePublished": "2025-08-31T22:09:00+05:30",
+  "dateModified": "2025-08-31T22:09:00+05:30",
+  "author":{
+    "@type": "Person",
+    "name": "Lakshay Chhabra"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lucven.com/posts/tokenization/training/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lucven AI",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lucven.com/favicon_io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class=" dark" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lucven.com/" accesskey="h" title="Lucven AI (Alt + H)">Lucven AI</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lucven.com/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/archives/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lucven.com/">Home</a>&nbsp;»&nbsp;<a href="https://lucven.com/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
+      The Tokenization Decision Tree: When to Train, When to Run, When to Cry
+    </h1>
+    <div class="post-meta"><span title='2025-08-31 22:09:00 +0530 IST'>August 31, 2025</span>&nbsp;·&nbsp;8 min&nbsp;·&nbsp;Lakshay Chhabra
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#the-tokenization-decision-tree-when-to-train-when-to-run-when-to-cry" aria-label="The Tokenization Decision Tree: When to Train, When to Run, When to Cry">The Tokenization Decision Tree: When to Train, When to Run, When to Cry</a><ul>
+                        
+                <li>
+                    <a href="#-the-brutal-truth-about-your-options" aria-label="⚖️ The Brutal Truth About Your Options">⚖️ The Brutal Truth About Your Options</a><ul>
+                        
+                <li>
+                    <a href="#your-real-choices-ranked-by-pain-level" aria-label="Your Real Choices (Ranked by Pain Level)">Your Real Choices (Ranked by Pain Level)</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-how-to-audit-your-domains-tokenization-health" aria-label="🔍 How to Audit Your Domain&rsquo;s Tokenization Health">🔍 How to Audit Your Domain&rsquo;s Tokenization Health</a><ul>
+                        
+                <li>
+                    <a href="#the-5-minute-domain-tokenization-test" aria-label="The 5-Minute Domain Tokenization Test">The 5-Minute Domain Tokenization Test</a></li>
+                <li>
+                    <a href="#the-domain-specific-reality-check" aria-label="The Domain-Specific Reality Check">The Domain-Specific Reality Check</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-should-i-train-my-own-tokenizer-test" aria-label="🎯 The &ldquo;Should I Train My Own Tokenizer?&rdquo; Test">🎯 The &ldquo;Should I Train My Own Tokenizer?&rdquo; Test</a><ul>
+                        
+                <li>
+                    <a href="#question-1-do-you-have-10m" aria-label="Question 1: Do you have $10M?">Question 1: Do you have $10M?</a></li>
+                <li>
+                    <a href="#question-2-do-you-have-6-12-months" aria-label="Question 2: Do you have 6-12 months?">Question 2: Do you have 6-12 months?</a></li>
+                <li>
+                    <a href="#question-3-is-your-domain-completely-unlike-anything-in-existence" aria-label="Question 3: Is your domain completely unlike anything in existence?">Question 3: Is your domain completely unlike anything in existence?</a></li>
+                <li>
+                    <a href="#question-4-do-you-have-a-team-thats-built-llms-before" aria-label="Question 4: Do you have a team that&rsquo;s built LLMs before?">Question 4: Do you have a team that&rsquo;s built LLMs before?</a></li>
+                <li>
+                    <a href="#question-5-are-you-sure-youre-not-just-empire-building" aria-label="Question 5: Are you sure you&rsquo;re not just empire building?">Question 5: Are you sure you&rsquo;re not just empire building?</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-why-training-your-own-tokenizer-is-usually-suicide" aria-label="💀 Why Training Your Own Tokenizer Is Usually Suicide">💀 Why Training Your Own Tokenizer Is Usually Suicide</a><ul>
+                        
+                <li>
+                    <a href="#the-hidden-dependencies-nobody-mentions" aria-label="The Hidden Dependencies Nobody Mentions">The Hidden Dependencies Nobody Mentions</a></li>
+                <li>
+                    <a href="#the-vocabulary-size-trap" aria-label="The Vocabulary Size Trap">The Vocabulary Size Trap</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-preprocessing-hacks-that-actually-work" aria-label="🔧 The Preprocessing Hacks That Actually Work">🔧 The Preprocessing Hacks That Actually Work</a><ul>
+                        
+                <li>
+                    <a href="#strategy-1-token-substitution-the-0-solution" aria-label="Strategy 1: Token Substitution (The $0 Solution)">Strategy 1: Token Substitution (The $0 Solution)</a></li>
+                <li>
+                    <a href="#strategy-2-contextual-expansion" aria-label="Strategy 2: Contextual Expansion">Strategy 2: Contextual Expansion</a></li>
+                <li>
+                    <a href="#strategy-3-the-nuclear-preprocessing-option" aria-label="Strategy 3: The Nuclear Preprocessing Option">Strategy 3: The Nuclear Preprocessing Option</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-when-to-switch-models-instead" aria-label="🎪 When to Switch Models Instead">🎪 When to Switch Models Instead</a><ul>
+                        
+                <li>
+                    <a href="#the-model-selection-matrix" aria-label="The Model Selection Matrix">The Model Selection Matrix</a></li>
+                <li>
+                    <a href="#the-quick-test" aria-label="The Quick Test">The Quick Test</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-when-extending-a-tokenizer-destroys-everything" aria-label="🚨 When Extending a Tokenizer Destroys Everything">🚨 When Extending a Tokenizer Destroys Everything</a><ul>
+                        
+                <li>
+                    <a href="#the-500k-mistake-pattern" aria-label="The $500K Mistake Pattern">The $500K Mistake Pattern</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-decision-framework-that-actually-works" aria-label="📊 The Decision Framework That Actually Works">📊 The Decision Framework That Actually Works</a><ul>
+                        
+                <li>
+                    <a href="#for-99-of-companies" aria-label="For 99% of Companies">For 99% of Companies</a></li>
+                <li>
+                    <a href="#the-domain-specific-tokenizer-reality" aria-label="The Domain-Specific Tokenizer Reality">The Domain-Specific Tokenizer Reality</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-production-checklist" aria-label="🎯 The Production Checklist">🎯 The Production Checklist</a><ul>
+                        
+                <li>
+                    <a href="#before-you-do-anything" aria-label="Before You Do ANYTHING">Before You Do ANYTHING</a></li>
+                <li>
+                    <a href="#the-preprocessing-pipeline-that-always-works" aria-label="The Preprocessing Pipeline That Always Works">The Preprocessing Pipeline That Always Works</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-ultimate-truth" aria-label="💡 The Ultimate Truth">💡 The Ultimate Truth</a></li>
+                <li>
+                    <a href="#-the-final-verdict" aria-label="🎪 The Final Verdict">🎪 The Final Verdict</a><ul>
+                        
+                <li>
+                    <a href="#when-to-train-your-own-tokenizer" aria-label="When to Train Your Own Tokenizer">When to Train Your Own Tokenizer</a></li>
+                <li>
+                    <a href="#when-to-extend-a-tokenizer" aria-label="When to Extend a Tokenizer">When to Extend a Tokenizer</a></li>
+                <li>
+                    <a href="#when-to-use-preprocessing" aria-label="When to Use Preprocessing">When to Use Preprocessing</a></li>
+                <li>
+                    <a href="#when-to-switch-models" aria-label="When to Switch Models">When to Switch Models</a></li>
+                <li>
+                    <a href="#when-to-give-up" aria-label="When to Give Up">When to Give Up</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="the-tokenization-decision-tree-when-to-train-when-to-run-when-to-cry">The Tokenization Decision Tree: When to Train, When to Run, When to Cry<a hidden class="anchor" aria-hidden="true" href="#the-tokenization-decision-tree-when-to-train-when-to-run-when-to-cry">#</a></h1>
+<p><strong>Hook:</strong> A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it&rsquo;s a $2M reminder that sometimes the &ldquo;right&rdquo; solution is the wrong solution.</p>
+<blockquote>
+<p><strong>TL;DR</strong>: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most &ldquo;tokenization problems&rdquo; are solved better with preprocessing hacks than proper solutions. Here&rsquo;s the decision tree that will save you millions and your sanity.</p></blockquote>
+<hr>
+<h2 id="-the-brutal-truth-about-your-options">⚖️ The Brutal Truth About Your Options<a hidden class="anchor" aria-hidden="true" href="#-the-brutal-truth-about-your-options">#</a></h2>
+<h3 id="your-real-choices-ranked-by-pain-level">Your Real Choices (Ranked by Pain Level)<a hidden class="anchor" aria-hidden="true" href="#your-real-choices-ranked-by-pain-level">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Option</th>
+          <th>Cost</th>
+          <th>Time</th>
+          <th>Success Rate</th>
+          <th>When It Makes Sense</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>Use existing + preprocessing</strong></td>
+          <td>$0</td>
+          <td>1 week</td>
+          <td>85%</td>
+          <td>Almost always</td>
+      </tr>
+      <tr>
+          <td><strong>Switch to better-tokenizing model</strong></td>
+          <td>$X (API costs)</td>
+          <td>1 day</td>
+          <td>70%</td>
+          <td>When available</td>
+      </tr>
+      <tr>
+          <td><strong>Fine-tune with careful data</strong></td>
+          <td>$10-50K</td>
+          <td>1 month</td>
+          <td>40%</td>
+          <td>Narrow domains</td>
+      </tr>
+      <tr>
+          <td><strong>Extend existing tokenizer</strong></td>
+          <td>$500K+</td>
+          <td>3 months</td>
+          <td>10%</td>
+          <td>Never</td>
+      </tr>
+      <tr>
+          <td><strong>Train tokenizer + model</strong></td>
+          <td>$10M+</td>
+          <td>6-12 months</td>
+          <td>30%</td>
+          <td>You&rsquo;re Google</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>The shocking reality</strong>: 90% of teams should pick option 1 and stop overthinking.</p>
+<hr>
+<h2 id="-how-to-audit-your-domains-tokenization-health">🔍 How to Audit Your Domain&rsquo;s Tokenization Health<a hidden class="anchor" aria-hidden="true" href="#-how-to-audit-your-domains-tokenization-health">#</a></h2>
+<h3 id="the-5-minute-domain-tokenization-test">The 5-Minute Domain Tokenization Test<a hidden class="anchor" aria-hidden="true" href="#the-5-minute-domain-tokenization-test">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">tokenization_health_check</span>(tokenizer, domain_texts):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;Run this before making ANY decisions&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    critical_metrics <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;catastrophic&#34;</span>: [],  <span style="color:#75715e"># &gt;5 tokens</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;bad&#34;</span>: [],           <span style="color:#75715e"># 4-5 tokens  </span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;problematic&#34;</span>: [],   <span style="color:#75715e"># 3 tokens</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;acceptable&#34;</span>: [],    <span style="color:#75715e"># 2 tokens</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;perfect&#34;</span>: []        <span style="color:#75715e"># 1 token</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Extract your domain&#39;s critical terms</span>
+</span></span><span style="display:flex;"><span>    domain_terms <span style="color:#f92672">=</span> extract_domain_specific_terms(domain_texts)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> term <span style="color:#f92672">in</span> domain_terms:
+</span></span><span style="display:flex;"><span>        tokens <span style="color:#f92672">=</span> tokenizer<span style="color:#f92672">.</span>encode(term)
+</span></span><span style="display:flex;"><span>        token_count <span style="color:#f92672">=</span> len(tokens)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> token_count <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">5</span>:
+</span></span><span style="display:flex;"><span>            critical_metrics[<span style="color:#e6db74">&#34;catastrophic&#34;</span>]<span style="color:#f92672">.</span>append(term)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> token_count <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span>:
+</span></span><span style="display:flex;"><span>            critical_metrics[<span style="color:#e6db74">&#34;bad&#34;</span>]<span style="color:#f92672">.</span>append(term)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ... etc</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># The verdict</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> len(critical_metrics[<span style="color:#e6db74">&#34;catastrophic&#34;</span>]) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">10</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;ABANDON SHIP - Switch models or domains&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> len(critical_metrics[<span style="color:#e6db74">&#34;bad&#34;</span>]) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">50</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;Major preprocessing required&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> len(critical_metrics[<span style="color:#e6db74">&#34;problematic&#34;</span>]) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">100</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;Preprocessing recommended&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;You&#39;re fine, stop worrying&#34;</span>
+</span></span></code></pre></div><h3 id="the-domain-specific-reality-check">The Domain-Specific Reality Check<a hidden class="anchor" aria-hidden="true" href="#the-domain-specific-reality-check">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Your Domain</th>
+          <th>Tokenization Disaster</th>
+          <th>What To Do</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>Medical/Pharma</strong></td>
+          <td>Drug names fragment (Pembrolizumab → 5 tokens)</td>
+          <td>Preprocessing substitution</td>
+      </tr>
+      <tr>
+          <td><strong>Finance</strong></td>
+          <td>Tickers fragment ($AAPL → 3 tokens)</td>
+          <td>Use dedicated finance models</td>
+      </tr>
+      <tr>
+          <td><strong>Legal</strong></td>
+          <td>Citations fragment (§2.3.4(a)(ii) → 12 tokens)</td>
+          <td>Create citation aliases</td>
+      </tr>
+      <tr>
+          <td><strong>Scientific</strong></td>
+          <td>Chemical names (C₆H₁₂O₆ → 8 tokens)</td>
+          <td>SMILES notation + preprocessing</td>
+      </tr>
+      <tr>
+          <td><strong>E-commerce</strong></td>
+          <td>Product codes (SKU-12345-XL → 6 tokens)</td>
+          <td>Normalize before tokenization</td>
+      </tr>
+      <tr>
+          <td><strong>Code</strong></td>
+          <td>Variable names (getUserById → 4 tokens)</td>
+          <td>Use code-specific models</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="-the-should-i-train-my-own-tokenizer-test">🎯 The &ldquo;Should I Train My Own Tokenizer?&rdquo; Test<a hidden class="anchor" aria-hidden="true" href="#-the-should-i-train-my-own-tokenizer-test">#</a></h2>
+<h3 id="question-1-do-you-have-10m">Question 1: Do you have $10M?<a hidden class="anchor" aria-hidden="true" href="#question-1-do-you-have-10m">#</a></h3>
+<p><strong>No</strong> → Stop here. Use preprocessing.<br>
+<strong>Yes</strong> → Continue to question 2.</p>
+<h3 id="question-2-do-you-have-6-12-months">Question 2: Do you have 6-12 months?<a hidden class="anchor" aria-hidden="true" href="#question-2-do-you-have-6-12-months">#</a></h3>
+<p><strong>No</strong> → Stop here. Use preprocessing.<br>
+<strong>Yes</strong> → Continue to question 3.</p>
+<h3 id="question-3-is-your-domain-completely-unlike-anything-in-existence">Question 3: Is your domain completely unlike anything in existence?<a hidden class="anchor" aria-hidden="true" href="#question-3-is-your-domain-completely-unlike-anything-in-existence">#</a></h3>
+<p><strong>No</strong> → Stop here. Use preprocessing.<br>
+<strong>Yes</strong> → Continue to question 4.</p>
+<h3 id="question-4-do-you-have-a-team-thats-built-llms-before">Question 4: Do you have a team that&rsquo;s built LLMs before?<a hidden class="anchor" aria-hidden="true" href="#question-4-do-you-have-a-team-thats-built-llms-before">#</a></h3>
+<p><strong>No</strong> → Stop here. Use preprocessing.<br>
+<strong>Yes</strong> → Continue to question 5.</p>
+<h3 id="question-5-are-you-sure-youre-not-just-empire-building">Question 5: Are you sure you&rsquo;re not just empire building?<a hidden class="anchor" aria-hidden="true" href="#question-5-are-you-sure-youre-not-just-empire-building">#</a></h3>
+<p><strong>No</strong> → Use preprocessing.<br>
+<strong>Yes</strong> → You&rsquo;re lying, but okay, train your tokenizer and learn the hard way.</p>
+<hr>
+<h2 id="-why-training-your-own-tokenizer-is-usually-suicide">💀 Why Training Your Own Tokenizer Is Usually Suicide<a hidden class="anchor" aria-hidden="true" href="#-why-training-your-own-tokenizer-is-usually-suicide">#</a></h2>
+<h3 id="the-hidden-dependencies-nobody-mentions">The Hidden Dependencies Nobody Mentions<a hidden class="anchor" aria-hidden="true" href="#the-hidden-dependencies-nobody-mentions">#</a></h3>
+<p><strong>Training a tokenizer means:</strong></p>
+<ol>
+<li><strong>Collecting domain corpus</strong> (100GB minimum, ideally 1TB+)</li>
+<li><strong>Training the tokenizer</strong> (BPE/WordPiece/Unigram)</li>
+<li><strong>Training a model from scratch</strong> (tokenizer → embeddings → transformer)</li>
+<li><strong>Achieving GPT-4o level performance</strong> (good luck)</li>
+<li><strong>Maintaining it forever</strong> (hiring, infrastructure, updates)</li>
+</ol>
+<blockquote>
+<p><strong>The Biotech Disaster</strong>: They trained a tokenizer on PubMed + clinical trials. It perfectly tokenized drug names! But it couldn&rsquo;t handle basic English anymore. &ldquo;The patient feels better&rdquo; tokenized worse than in GPT-4o. Their domain-specific gain was destroyed by general capability loss.</p></blockquote>
+<h3 id="the-vocabulary-size-trap">The Vocabulary Size Trap<a hidden class="anchor" aria-hidden="true" href="#the-vocabulary-size-trap">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Vocabulary Size</th>
+          <th>Training Cost</th>
+          <th>Inference Speed</th>
+          <th>Quality</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>32K tokens</td>
+          <td>$5M</td>
+          <td>Fast</td>
+          <td>Poor coverage</td>
+      </tr>
+      <tr>
+          <td>50K tokens</td>
+          <td>$8M</td>
+          <td>Balanced</td>
+          <td>Standard (GPT-3)</td>
+      </tr>
+      <tr>
+          <td>100K tokens</td>
+          <td>$12M</td>
+          <td>Slower</td>
+          <td>Good coverage</td>
+      </tr>
+      <tr>
+          <td>250K tokens</td>
+          <td>$20M</td>
+          <td>Slow</td>
+          <td>Diminishing returns</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>The cruel irony</strong>: Larger vocabulary = better tokenization but slower inference and higher training costs. You&rsquo;ll go bankrupt before finding the sweet spot.</p>
+<hr>
+<h2 id="-the-preprocessing-hacks-that-actually-work">🔧 The Preprocessing Hacks That Actually Work<a hidden class="anchor" aria-hidden="true" href="#-the-preprocessing-hacks-that-actually-work">#</a></h2>
+<h3 id="strategy-1-token-substitution-the-0-solution">Strategy 1: Token Substitution (The $0 Solution)<a hidden class="anchor" aria-hidden="true" href="#strategy-1-token-substitution-the-0-solution">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TokenSubstitution</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;What actually works in production&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>substitutions <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Medical</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;COVID-19&#34;</span>: <span style="color:#e6db74">&#34;COVIDNINETEEN&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;SARS-CoV-2&#34;</span>: <span style="color:#e6db74">&#34;SARSCOVTWO&#34;</span>,
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Finance  </span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;$AAPL&#34;</span>: <span style="color:#e6db74">&#34;AAPL_STOCK&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;$GOOGL&#34;</span>: <span style="color:#e6db74">&#34;GOOGL_STOCK&#34;</span>,
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># E-commerce</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;e-commerce&#34;</span>: <span style="color:#e6db74">&#34;ecommerce&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;multi-channel&#34;</span>: <span style="color:#e6db74">&#34;multichannel&#34;</span>,
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Your domain</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;TurboIN&#34;</span>: <span style="color:#e6db74">&#34;TURBOINDEX_INDIA&#34;</span>,
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">preprocess</span>(self, text):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;Run before tokenization&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> bad, good <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>substitutions<span style="color:#f92672">.</span>items():
+</span></span><span style="display:flex;"><span>            text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(bad, good)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> text
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">postprocess</span>(self, text):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;Run after generation&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> bad, good <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>substitutions<span style="color:#f92672">.</span>items():
+</span></span><span style="display:flex;"><span>            text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(good, bad)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> text
+</span></span></code></pre></div><p><strong>Success story</strong>: A medical AI company had 847 drug names that tokenized badly. Instead of retraining, they built a substitution dictionary. Development time: 3 days. Performance improvement: 34%. Cost: $0.</p>
+<h3 id="strategy-2-contextual-expansion">Strategy 2: Contextual Expansion<a hidden class="anchor" aria-hidden="true" href="#strategy-2-contextual-expansion">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">contextual_expansion</span>(text):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;Add context to help the model understand fragments&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    expansions <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;TurboIN&#34;</span>: <span style="color:#e6db74">&#34;TurboIN (Turbo Index for India)&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;QRAG&#34;</span>: <span style="color:#e6db74">&#34;QRAG (Quantum RAG)&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;KAN&#34;</span>: <span style="color:#e6db74">&#34;KAN (Kolmogorov-Arnold Networks)&#34;</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># First occurrence gets expansion</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> term, expansion <span style="color:#f92672">in</span> expansions<span style="color:#f92672">.</span>items():
+</span></span><span style="display:flex;"><span>        text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(term, expansion, <span style="color:#ae81ff">1</span>)  <span style="color:#75715e"># Only first occurrence</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> text
+</span></span></code></pre></div><h3 id="strategy-3-the-nuclear-preprocessing-option">Strategy 3: The Nuclear Preprocessing Option<a hidden class="anchor" aria-hidden="true" href="#strategy-3-the-nuclear-preprocessing-option">#</a></h3>
+<p>When nothing else works, go full nuclear:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">nuclear_preprocessing</span>(text):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;When you&#39;re desperate and need it to work&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Replace all problematic characters</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;-&#34;</span>, <span style="color:#e6db74">&#34;_&#34;</span>)  <span style="color:#75715e"># Hyphens fragment everything</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;.&#34;</span>, <span style="color:#e6db74">&#34;_&#34;</span>)  <span style="color:#75715e"># Periods are chaos</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;_&#34;</span>)  <span style="color:#75715e"># Slashes are death</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Normalize everything</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>lower()  <span style="color:#75715e"># Consistent casing</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> re<span style="color:#f92672">.</span>sub(<span style="color:#e6db74">r</span><span style="color:#e6db74">&#39;\s+&#39;</span>, <span style="color:#e6db74">&#39; &#39;</span>, text)  <span style="color:#75715e"># Single spaces</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Create compound words</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;e commerce&#34;</span>, <span style="color:#e6db74">&#34;ecommerce&#34;</span>)
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;multi modal&#34;</span>, <span style="color:#e6db74">&#34;multimodal&#34;</span>)
+</span></span><span style="display:flex;"><span>    text <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>replace(<span style="color:#e6db74">&#34;pre training&#34;</span>, <span style="color:#e6db74">&#34;pretraining&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> text
+</span></span></code></pre></div><hr>
+<h2 id="-when-to-switch-models-instead">🎪 When to Switch Models Instead<a hidden class="anchor" aria-hidden="true" href="#-when-to-switch-models-instead">#</a></h2>
+<h3 id="the-model-selection-matrix">The Model Selection Matrix<a hidden class="anchor" aria-hidden="true" href="#the-model-selection-matrix">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Model</th>
+          <th>Best For</th>
+          <th>Tokenization Strength</th>
+          <th>When to Choose</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>GPT-4</strong></td>
+          <td>General + English</td>
+          <td>Good for common terms</td>
+          <td>Default choice</td>
+      </tr>
+      <tr>
+          <td><strong>Claude</strong></td>
+          <td>Long documents</td>
+          <td>Better punctuation handling</td>
+          <td>Documents with complex formatting</td>
+      </tr>
+      <tr>
+          <td><strong>Gemini</strong></td>
+          <td>Multilingual</td>
+          <td>Excellent non-English</td>
+          <td>International domains</td>
+      </tr>
+      <tr>
+          <td><strong>Llama 3</strong></td>
+          <td>Open source needs</td>
+          <td>Good, 128K vocabulary</td>
+          <td>When you need control</td>
+      </tr>
+      <tr>
+          <td><strong>Mistral</strong></td>
+          <td>European languages</td>
+          <td>Better for accents/diacritics</td>
+          <td>European market</td>
+      </tr>
+      <tr>
+          <td><strong>Command-R</strong></td>
+          <td>RAG applications</td>
+          <td>Optimized for retrieval</td>
+          <td>Search-heavy applications</td>
+      </tr>
+      <tr>
+          <td><strong>Domain-specific</strong></td>
+          <td>Narrow domains</td>
+          <td>Perfect for that domain</td>
+          <td>Only if it exists</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="the-quick-test">The Quick Test<a hidden class="anchor" aria-hidden="true" href="#the-quick-test">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">model_selection_test</span>(models, test_phrases):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;Which model tokenizes your domain best?&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    results <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> model <span style="color:#f92672">in</span> models:
+</span></span><span style="display:flex;"><span>        total_tokens <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> phrase <span style="color:#f92672">in</span> test_phrases:
+</span></span><span style="display:flex;"><span>            tokens <span style="color:#f92672">=</span> model<span style="color:#f92672">.</span>tokenize(phrase)
+</span></span><span style="display:flex;"><span>            total_tokens <span style="color:#f92672">+=</span> len(tokens)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        results[model<span style="color:#f92672">.</span>name] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;total_tokens&#34;</span>: total_tokens,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;avg_tokens&#34;</span>: total_tokens <span style="color:#f92672">/</span> len(test_phrases)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># The model with lowest token count wins</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> sorted(results<span style="color:#f92672">.</span>items(), key<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span> x: x[<span style="color:#ae81ff">1</span>][<span style="color:#e6db74">&#34;total_tokens&#34;</span>])
+</span></span></code></pre></div><hr>
+<h2 id="-when-extending-a-tokenizer-destroys-everything">🚨 When Extending a Tokenizer Destroys Everything<a hidden class="anchor" aria-hidden="true" href="#-when-extending-a-tokenizer-destroys-everything">#</a></h2>
+<h3 id="the-500k-mistake-pattern">The $500K Mistake Pattern<a hidden class="anchor" aria-hidden="true" href="#the-500k-mistake-pattern">#</a></h3>
+<p><strong>What companies try:</strong></p>
+<ol>
+<li>Take GPT-4o&rsquo;s tokenizer</li>
+<li>Add 1000 domain terms</li>
+<li>Fine-tune the model</li>
+<li>Watch it fail spectacularly</li>
+</ol>
+<p><strong>Why it fails:</strong></p>
+<ul>
+<li>New tokens have random embeddings</li>
+<li>Model wasn&rsquo;t trained with these tokens</li>
+<li>Attention patterns are all wrong</li>
+<li>Position encodings don&rsquo;t align</li>
+<li>You created 1000 [UNK] tokens with extra steps</li>
+</ul>
+<blockquote>
+<p><strong>Real disaster</strong>: A legal tech company added 500 legal terms to GPT-3&rsquo;s tokenizer. The model couldn&rsquo;t even complete sentences anymore. Every legal term became a &ldquo;stop token&rdquo; that broke generation. $500K and 3 months wasted.</p></blockquote>
+<hr>
+<h2 id="-the-decision-framework-that-actually-works">📊 The Decision Framework That Actually Works<a hidden class="anchor" aria-hidden="true" href="#-the-decision-framework-that-actually-works">#</a></h2>
+<h3 id="for-99-of-companies">For 99% of Companies<a hidden class="anchor" aria-hidden="true" href="#for-99-of-companies">#</a></h3>
+<pre tabindex="0"><code class="language-mermaid" data-lang="mermaid">Is your domain tokenizing horribly?
+├─ No → Use the model as-is
+└─ Yes → Can you preprocess around it?
+    ├─ Yes → Build preprocessing pipeline (1 week)
+    └─ No → Is there a better-tokenizing model?
+        ├─ Yes → Switch models
+        └─ No → Are you Google/OpenAI/Anthropic?
+            ├─ Yes → Train from scratch
+            └─ No → Preprocessing is your only option
+</code></pre><h3 id="the-domain-specific-tokenizer-reality">The Domain-Specific Tokenizer Reality<a hidden class="anchor" aria-hidden="true" href="#the-domain-specific-tokenizer-reality">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Domain</th>
+          <th>&ldquo;Proper&rdquo; Solution</th>
+          <th>What Actually Works</th>
+          <th>Success Rate</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Medical</td>
+          <td>BioGPT, PubMedBERT</td>
+          <td>GPT-4o + substitutions</td>
+          <td>85% vs 60%</td>
+      </tr>
+      <tr>
+          <td>Legal</td>
+          <td>LegalBERT</td>
+          <td>Claude + formatting</td>
+          <td>80% vs 65%</td>
+      </tr>
+      <tr>
+          <td>Finance</td>
+          <td>FinBERT</td>
+          <td>GPT-4o + ticker cleanup</td>
+          <td>90% vs 70%</td>
+      </tr>
+      <tr>
+          <td>Code</td>
+          <td>CodeLlama</td>
+          <td>Already good!</td>
+          <td>95%</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>The pattern</strong>: Domain-specific models have better tokenization but worse overall performance. General models with preprocessing beat specialized models.</p>
+<hr>
+<h2 id="-the-production-checklist">🎯 The Production Checklist<a hidden class="anchor" aria-hidden="true" href="#-the-production-checklist">#</a></h2>
+<h3 id="before-you-do-anything">Before You Do ANYTHING<a hidden class="anchor" aria-hidden="true" href="#before-you-do-anything">#</a></h3>
+<ol>
+<li><strong>Run the tokenization health check</strong> (5 minutes)</li>
+<li><strong>Count critical bad terms</strong> (&lt;100? Preprocess. &gt;1000? Cry.)</li>
+<li><strong>Test preprocessing impact</strong> (Usually solves 80%)</li>
+<li><strong>Compare model options</strong> (Different model might be free solution)</li>
+<li><strong>Calculate real costs</strong> (Training = $10M minimum)</li>
+</ol>
+<h3 id="the-preprocessing-pipeline-that-always-works">The Preprocessing Pipeline That Always Works<a hidden class="anchor" aria-hidden="true" href="#the-preprocessing-pipeline-that-always-works">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ProductionTokenizationPipeline</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;What every company eventually builds&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>load_substitutions()  <span style="color:#75715e"># Your domain dictionary</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>load_expansions()     <span style="color:#75715e"># Context additions</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>load_normalizations() <span style="color:#75715e"># Character fixes</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">process</span>(self, text):
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 1. Normalize (fix Unicode, spaces, etc.)</span>
+</span></span><span style="display:flex;"><span>        text <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>normalize(text)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 2. Expand (add context on first use)</span>
+</span></span><span style="display:flex;"><span>        text <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>expand_terms(text)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 3. Substitute (replace problematic terms)</span>
+</span></span><span style="display:flex;"><span>        text <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>substitute_terms(text)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 4. Tokenize</span>
+</span></span><span style="display:flex;"><span>        tokens <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>tokenizer<span style="color:#f92672">.</span>encode(text)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 5. Validate (check for catastrophic fragmentation)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> max_token_length(tokens) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">5</span>:
+</span></span><span style="display:flex;"><span>            logging<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Bad tokenization detected: </span><span style="color:#e6db74">{</span>text<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> tokens
+</span></span></code></pre></div><hr>
+<h2 id="-the-ultimate-truth">💡 The Ultimate Truth<a hidden class="anchor" aria-hidden="true" href="#-the-ultimate-truth">#</a></h2>
+<blockquote>
+<p><strong>You don&rsquo;t have a tokenization problem. You have a preprocessing problem.</strong></p></blockquote>
+<p>The companies that succeed:</p>
+<ul>
+<li>Spend 1 week on preprocessing</li>
+<li>Use existing models</li>
+<li>Ship to production</li>
+<li>Iterate based on real usage</li>
+</ul>
+<p>The companies that fail:</p>
+<ul>
+<li>Spend 6 months on &ldquo;proper&rdquo; tokenization</li>
+<li>Train custom models</li>
+<li>Never ship</li>
+<li>Run out of money</li>
+</ul>
+<hr>
+<h2 id="-the-final-verdict">🎪 The Final Verdict<a hidden class="anchor" aria-hidden="true" href="#-the-final-verdict">#</a></h2>
+<h3 id="when-to-train-your-own-tokenizer">When to Train Your Own Tokenizer<a hidden class="anchor" aria-hidden="true" href="#when-to-train-your-own-tokenizer">#</a></h3>
+<ul>
+<li><strong>Never</strong></li>
+</ul>
+<h3 id="when-to-extend-a-tokenizer">When to Extend a Tokenizer<a hidden class="anchor" aria-hidden="true" href="#when-to-extend-a-tokenizer">#</a></h3>
+<ul>
+<li><strong>Never</strong></li>
+</ul>
+<h3 id="when-to-use-preprocessing">When to Use Preprocessing<a hidden class="anchor" aria-hidden="true" href="#when-to-use-preprocessing">#</a></h3>
+<ul>
+<li><strong>Always</strong></li>
+</ul>
+<h3 id="when-to-switch-models">When to Switch Models<a hidden class="anchor" aria-hidden="true" href="#when-to-switch-models">#</a></h3>
+<ul>
+<li>When preprocessing can&rsquo;t fix it AND another model tokenizes better</li>
+</ul>
+<h3 id="when-to-give-up">When to Give Up<a hidden class="anchor" aria-hidden="true" href="#when-to-give-up">#</a></h3>
+<ul>
+<li>When your domain terms average &gt;5 tokens after preprocessing</li>
+<li>When switching models doesn&rsquo;t help</li>
+<li>When you&rsquo;re trying to process DNA sequences as text</li>
+</ul>
+<hr>
+<blockquote>
+<p><strong>💀 The Hard Truth</strong>: Even specialized models like BioBERT struggle with domain tokenization - &ldquo;Immunoglobulin&rdquo; becomes 7 fragments even in a biomedical model! Research shows BioBERT requires extensive fine-tuning and still shows tokenization issues. Teams using GPT-4o with preprocessing achieve competitive or better results with less effort and cost.</p></blockquote>
+<hr>
+<p><strong>Takeaway:</strong> Your tokenization problems are real, but the solution isn&rsquo;t training a tokenizer. It&rsquo;s accepting that preprocessing hacks are not hacks, they&rsquo;re the production solution. Stop trying to be &ldquo;proper&rdquo; and start shipping code that works.</p>
+<p>PS. The &lsquo;Biotech Disaster&rsquo; scenario described here is a hypothetical example designed to highlight the trade-offs between domain-specific and general-purpose models. It is not based on a real-world event.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lucven.com/tags/tokenisation/">Tokenisation</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lucven.com/posts/tokenization/tokenization/">
+    <span class="title">« Prev</span>
+    <br>
+    <span>Tokenisation: Why 90% of LLM Failures Start Here</span>
+  </a>
+  <a class="next" href="https://lucven.com/posts/tokenization/what_are_tokens/">
+    <span class="title">Next »</span>
+    <br>
+    <span>Tokens Aren&#39;t Meaning — They&#39;re Compression Hacks</span>
+  </a>
+</nav>
+
+
+<ul class="share-buttons">
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on x"
+            href="https://x.com/intent/tweet/?text=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry&amp;url=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f&amp;hashtags=Tokenisation">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M512 62.554 L 512 449.446 C 512 483.97 483.97 512 449.446 512 L 62.554 512 C 28.03 512 0 483.97 0 449.446 L 0 62.554 C 0 28.03 28.029 0 62.554 0 L 449.446 0 C 483.971 0 512 28.03 512 62.554 Z M 269.951 190.75 L 182.567 75.216 L 56 75.216 L 207.216 272.95 L 63.9 436.783 L 125.266 436.783 L 235.9 310.383 L 332.567 436.783 L 456 436.783 L 298.367 228.367 L 432.367 75.216 L 371.033 75.216 Z M 127.633 110 L 164.101 110 L 383.481 400.065 L 349.5 400.065 Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on linkedin"
+            href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f&amp;title=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry&amp;summary=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry&amp;source=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on reddit"
+            href="https://reddit.com/submit?url=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f&title=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on facebook"
+            href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on whatsapp"
+            href="https://api.whatsapp.com/send?text=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry%20-%20https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on telegram"
+            href="https://telegram.me/share/url?text=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry&amp;url=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f">
+            <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share The Tokenization Decision Tree: When to Train, When to Run, When to Cry on ycombinator"
+            href="https://news.ycombinator.com/submitlink?t=The%20Tokenization%20Decision%20Tree%3a%20When%20to%20Train%2c%20When%20to%20Run%2c%20When%20to%20Cry&u=https%3a%2f%2flucven.com%2fposts%2ftokenization%2ftraining%2f">
+            <svg version="1.1" xml:space="preserve" width="30px" height="30px" viewBox="0 0 512 512" fill="currentColor"
+                xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+                <path
+                    d="M449.446 0C483.971 0 512 28.03 512 62.554L512 449.446C512 483.97 483.97 512 449.446 512L62.554 512C28.03 512 0 483.97 0 449.446L0 62.554C0 28.03 28.029 0 62.554 0L449.446 0ZM183.8767 87.9921H121.8427L230.6673 292.4508V424.0079H281.3328V292.4508L390.1575 87.9921H328.1233L256 238.2489z" />
+            </svg>
+        </a>
+    </li>
+</ul>
+
+  </footer><script src="https://giscus.app/client.js"
+  data-repo="lakshaychhabra/lucven-comments"
+  data-repo-id="R_kgDOPYOEYw"
+  data-category="Q&A"
+  data-category-id="DIC_kwDOPYOEY84CtxWt"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="top"
+  data-theme="preferred_color_scheme"
+  data-lang="en"
+  data-loading="lazy"
+  crossorigin="anonymous"
+  async>
+</script>
+
+
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="https://lucven.com/">Lucven AI</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

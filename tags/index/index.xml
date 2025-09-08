@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Index on Lucven AI</title>
+    <link>https://lucven.com/tags/index/</link>
+    <description>Recent content in Index on Lucven AI</description>
+    <generator>Hugo -- 0.148.2</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 01 Sep 2025 22:09:00 +0530</lastBuildDate>
+    <atom:link href="https://lucven.com/tags/index/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Tokenisation: Why 90% of LLM Failures Start Here</title>
+      <link>https://lucven.com/posts/tokenization/tokenization/</link>
+      <pubDate>Mon, 01 Sep 2025 22:09:00 +0530</pubDate>
+      <guid>https://lucven.com/posts/tokenization/tokenization/</guid>
+      <description>&lt;h1 id=&#34;the-tokenization-papers-why-90-of-llm-failures-start-here&#34;&gt;The Tokenization Papers: Why 90% of LLM Failures Start Here&lt;/h1&gt;
+&lt;h2 id=&#34;the-hidden-layer-that-controls-everything&#34;&gt;The Hidden Layer That Controls Everything&lt;/h2&gt;
+&lt;p&gt;Every prompt you send to GPT, Claude, or Gemini gets shredded into tokens before the model even &amp;ldquo;thinks.&amp;rdquo; These aren&amp;rsquo;t words — they&amp;rsquo;re &lt;strong&gt;compression artifacts from 2021 web crawls&lt;/strong&gt; that now dictate:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Your API bill&lt;/strong&gt; (why Hindi costs 17x more than English)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Your model&amp;rsquo;s IQ&lt;/strong&gt; (why it thinks 9.11 &amp;gt; 9.9)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Your RAG accuracy&lt;/strong&gt; (why $AAPL returns articles about Polish batteries)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Tokenization is the silent killer of production AI systems. These papers expose the disasters hiding in plain sight.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
