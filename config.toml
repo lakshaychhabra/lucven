@@ -1,6 +1,6 @@
 baseURL = "https://lucven.com/"
 languageCode = "en-us"
-title = "Lucven AI Systems"
+title = "Lucven AI"
 theme = "PaperMod"
 
 [outputs]
