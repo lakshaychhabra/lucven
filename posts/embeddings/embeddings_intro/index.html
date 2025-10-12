@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>How Words Become Vectors: Embeddings Inside Transformers (Without Tears) | Lucven AI</title>
+<meta name="keywords" content="Embeddings">
+<meta name="description" content="How Words Become Vectors: Embeddings Inside Transformers (Without Tears)
+
+“Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”
+TL;DR:
+Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units).
+This guide shows what’s breaking, what’s already fixed, and what you still need to handle.">
+<meta name="author" content="Lakshay Chhabra">
+<link rel="canonical" href="https://lucven.com/posts/embeddings/embeddings_intro/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.8fe10233a706bc87f2e08b3cf97b8bd4c0a80f10675a143675d59212121037c0.css" integrity="sha256-j&#43;ECM6cGvIfy4Is8&#43;XuL1MCoDxBnWhQ2ddWSEhIQN8A=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://lucven.com/favicon_io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lucven.com/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lucven.com/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lucven.com/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lucven.com/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://lucven.com/posts/embeddings/embeddings_intro/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+</noscript>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MWZSVJK8P6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-MWZSVJK8P6');
+</script>
+
+
+<script>
+(function(){
+  const INTERVAL = 15000; 
+  let last = (document.visibilityState === 'visible' && document.hasFocus()) ? Date.now() : null;
+  let acc = 0, timer = null;
+  const active = () => document.visibilityState === 'visible' && document.hasFocus();
+
+  function start(){
+    if (!timer) timer = setInterval(beat, INTERVAL);
+    if (!last && active()) last = Date.now();
+  }
+  function stop(){
+    if (timer) { clearInterval(timer); timer = null; }
+    if (last) { acc += Date.now() - last; last = null; }
+  }
+  function beat(){
+    let ms = acc + (last ? Date.now() - last : 0);
+    if (ms <= 0) return;
+    if (window.gtag) gtag('event', 'active_time', {
+      active_seconds: Math.round(ms / 1000),
+      page_path: location.pathname
+    });
+    acc = 0;
+    if (last) last = Date.now();
+  }
+
+  document.addEventListener('visibilitychange', () => active() ? start() : stop());
+  window.addEventListener('focus', start);
+  window.addEventListener('blur', stop);
+  window.addEventListener('pagehide', beat);
+
+  if (active()) { last = Date.now(); start(); }
+})();
+</script>
+<meta property="og:url" content="https://lucven.com/posts/embeddings/embeddings_intro/">
+  <meta property="og:site_name" content="Lucven AI">
+  <meta property="og:title" content="How Words Become Vectors: Embeddings Inside Transformers (Without Tears)">
+  <meta property="og:description" content="How Words Become Vectors: Embeddings Inside Transformers (Without Tears) “Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”
+TL;DR: Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units). This guide shows what’s breaking, what’s already fixed, and what you still need to handle.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-10-03T00:10:39+05:30">
+    <meta property="article:modified_time" content="2025-10-03T00:10:39+05:30">
+    <meta property="article:tag" content="Embeddings">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="How Words Become Vectors: Embeddings Inside Transformers (Without Tears)">
+<meta name="twitter:description" content="How Words Become Vectors: Embeddings Inside Transformers (Without Tears)
+
+“Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”
+TL;DR:
+Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units).
+This guide shows what’s breaking, what’s already fixed, and what you still need to handle.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://lucven.com/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "How Words Become Vectors: Embeddings Inside Transformers (Without Tears)",
+      "item": "https://lucven.com/posts/embeddings/embeddings_intro/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "How Words Become Vectors: Embeddings Inside Transformers (Without Tears)",
+  "name": "How Words Become Vectors: Embeddings Inside Transformers (Without Tears)",
+  "description": "How Words Become Vectors: Embeddings Inside Transformers (Without Tears) “Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”\nTL;DR: Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units). This guide shows what’s breaking, what’s already fixed, and what you still need to handle.\n",
+  "keywords": [
+    "Embeddings"
+  ],
+  "articleBody": "How Words Become Vectors: Embeddings Inside Transformers (Without Tears) “Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”\nTL;DR: Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units). This guide shows what’s breaking, what’s already fixed, and what you still need to handle.\n🎯 The Architecture: What Libraries Handle vs What You Handle What SentenceTransformers/OpenAI API handle for you: ✅ CLS vs mean pooling\n✅ Padding token exclusion\n✅ Special token handling\n✅ Layer selection\n✅ L2 normalization\nWhat you still need to handle: ❌ Anisotropic distribution (vectors in narrow cones)\n❌ Length-dependent magnitude bias\n❌ Domain-specific tokenization failures\n❌ Quantization errors\n❌ Task-appropriate model selection\n💀 The CLS Token: Design vs Reality What Libraries Are Actually Doing Historical context: BERT was pre-trained with Next Sentence Prediction (NSP), where [CLS] aggregated sentence-level information. That made sense for classification but fails for semantic similarity.\n# BERT's original training (2018): # [CLS] was trained to predict if sentence B follows sentence A # This biases CLS toward boundary/classification signals, not semantics # Modern sentence encoders (2020+): from sentence_transformers import SentenceTransformer model = SentenceTransformer('all-MiniLM-L6-v2') print(model[1].pooling_mode_mean_tokens) # True print(model[1].pooling_mode_cls_token) # False Technical correction: CLS doesn’t “stop paying attention.” It develops fixed attention patterns during pre-training, emphasizing early tokens due to bias in attention distributions.\n# CLS attention follows a power-law decay import numpy as np position = np.arange(512) attention_weight = 1 / (1 + 0.1 * position) attention_weight /= attention_weight.sum() Position Range Total Attention 0–10 31% 11–50 42% 51–100 18% 100+ 9% It’s not “giving up” it’s learned positional bias.\n🔥 The Domain Vocabulary Problem The Real Issue: Subword Tokenization vs Semantic Units The problem isn’t that subword fragments get “wrong” embeddings, it’s that their compositional semantics don’t equal the learned semantics of the full token.\n# Mathematically: # embed(\"DataForce\") ≠ f(embed(\"Data\"), embed(\"Force\")) # for any simple function f (mean, sum, concat) Reasons:\n“DataForce” as a single token might have appeared in training. Split tokens trigger different attention patterns. Positional encodings differ (1 vs 2 positions). Attention heads specialize around token boundaries. Even if “DataForce” never appeared, its composed meaning is context-dependent and unstable across uses.\nWhy Averaging Fails The embedding space is non-linear and anisotropic, so averaging subword vectors rarely preserves meaning.\nMidpoints land in semantically meaningless regions of the manifold.\n# The embedding space is non-linear and anisotropic # Given embeddings in ℝ^d: v_compound = embed(\"DataForce\") # If it existed as single token v_data = embed(\"Data\") v_force = embed(\"Force\") # The average (v_data + v_force)/2 assumes: # 1. Linear interpolation preserves semantics (FALSE) # 2. The space between points is semantically meaningful (FALSE) # 3. Composition is additive (FALSE) # In reality, the manifold is highly curved # The midpoint often lands in a semantically different region ✅ Production Fixes Fix 1: Subword Pooling with Positional Awareness def subword_aware_pooling(token_embeddings, word_ids, attention_mask): ''' Pool subwords back to word level before sentence pooling. ''' word_embeddings, current_embeddings = [], [] current_word = -1 for i, word_id in enumerate(word_ids): if word_id is None: continue if word_id != current_word: if current_embeddings: word_embeddings.append(torch.stack(current_embeddings).mean(0)) current_word = word_id current_embeddings = [token_embeddings[i]] else: current_embeddings.append(token_embeddings[i]) if current_embeddings: word_embeddings.append(torch.stack(current_embeddings).mean(0)) return torch.stack(word_embeddings).mean(0) Fix 2: Contrastive Fine-Tuning (What Actually Works at Scale) from sentence_transformers import SentenceTransformer, InputExample, losses from torch.utils.data import DataLoader model = SentenceTransformer('all-mpnet-base-v2') train_examples = [ InputExample(texts=['DataForce quarterly report', 'DataForce Q3 earnings'], label=0.9), InputExample(texts=['DataForce analysis', 'Data Force military'], label=0.1), ] train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=16) train_loss = losses.MultipleNegativesRankingLoss(model) model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=1, warmup_steps=100) Now “DataForce” has consistent representation regardless of tokenization.\n🌡️ The Anisotropy Problem (Mathematically Correct) What It Actually Means Definition: Anisotropy = embeddings cluster in a narrow cone of the hypersphere instead of spreading uniformly.\nWhat you expect (isotropic - good): * * * * * * * * * * * * * * (Embeddings spread evenly) What you get (anisotropic - bad): .. .:::. .::::. '::' (All embeddings in narrow cone) def measure_anisotropy(embeddings): ''' Measures how uniformly embeddings fill the space. Returns isotropy score: 0 = highly anisotropic, 1 = perfectly isotropic. ''' normalized = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True) similarities = normalized @ normalized.T d = embeddings.shape[1] expected_var = 1 / d mask = ~np.eye(similarities.shape[0], dtype=bool) off_diagonal = similarities[mask] actual_mean = np.mean(off_diagonal) actual_var = np.var(off_diagonal) mean_isotropy = 1 - abs(actual_mean) var_isotropy = min(actual_var / expected_var, 1) return (mean_isotropy + var_isotropy) / 2 Model Isotropy Score BERT 0.31 all-MiniLM-L6-v2 0.67 all-mpnet-base-v2 0.71 SimCSE 0.84 Why It Happens During softmax training, models minimize:\np(correct|q) = exp(sim(q, d+)) / Σ exp(sim(q, d)) To stabilize the denominator, models compress embeddings into a narrow cone, increasing the average similarity across all pairs.\nThis is a side-effect of optimization dynamics, not vocabulary frequency.\n# During training with softmax loss: # p(correct|query) = exp(sim(q,d+)) / Σ exp(sim(q,d)) # To minimize loss, model learns: # 1. Push positive pairs together # 2. BUT: denominator includes ALL negatives # 3. Easiest solution: compress all vectors to small region # 4. This maximizes average similarity, making denominator predictable # Mathematical proof (simplified): # Given uniformly sampled negatives on unit sphere # Expected cosine similarity E[cos(θ)] in d dimensions = 0 # But if all vectors in cone of angle α: # E[cos(θ)] = cos(α) \u003e 0 # This reduces variance in denominator, stabilizing training ⚙️ The Whitening Fix def whiten_embeddings(embeddings, eps=1e-6): mean = embeddings.mean(0) centered = embeddings - mean cov = (centered.T @ centered) / (len(centered) - 1) eigvals, eigvecs = np.linalg.eigh(cov) W = eigvecs @ np.diag(1/np.sqrt(eigvals + eps)) @ eigvecs.T return centered @ W, mean, W Always apply the same mean and W at inference.\nWhitening must be fit on your distribution, not applied blindly.\n📏 The Length Bias Problem It’s not the Central Limit Theorem: it’s semantic dilution.\nMean pooling assigns equal weight to all tokens, so meaningful ones get drowned out.\n# Short text (3 tokens): (v1 + v2 + v3) / 3 → 33% per token # Long text (100 tokens): (v1 + ... + v100) / 100 → 1% per token # The actual mechanism: # 1. Longer sequences have more tokens # 2. Attention is roughly uniform (after many layers) # 3. Mean pooling weights each token equally # 4. More tokens = each individual token contributes less # 5. Outlier tokens (carrying key semantics) get diluted # Mathematical formulation: # Short text: v_short = (v1 + v2 + v3) / 3 # If v2 is semantic key: contribution = 33% # Long text: v_long = (v1 + ... + v100) / 100 # If v50 is semantic key: contribution = 1% # The semantic signal gets diluted, not \"converged to mean\" Fix: Weighted Pooling def weighted_pooling(token_embeddings, attention_mask, attention_weights=None): ''' Use attention weights for importance-weighted pooling. ''' if attention_weights is None: attention_weights = model(**inputs, output_attentions=True).attentions[-1] attention_weights = attention_weights.mean(dim=1)[:, 0, :] attention_weights = attention_weights * attention_mask attention_weights = attention_weights / attention_weights.sum(dim=1, keepdim=True) weighted = (token_embeddings * attention_weights.unsqueeze(-1)).sum(dim=1) return weighted 🧮 Quantization: The Real Math Scalar Quantization (int8) Scalar quantization and product quantization work differently:\ndef scalar_quantize(embeddings): scale = np.percentile(np.abs(embeddings), 95) quantized = np.clip(embeddings / scale * 127, -128, 127).astype(np.int8) dequantized = quantized.astype(np.float32) * scale / 127 mse = np.mean((embeddings - dequantized) ** 2) return quantized, scale, mse Product Quantization (PQ) def product_quantize(embeddings, num_subvectors=8, bits_per_subvector=8): ''' Split vector into subvectors and quantize each independently. ''' d = embeddings.shape[1] d_sub = d // num_subvectors quantized, codebooks = [], [] for i in range(num_subvectors): sub = embeddings[:, i*d_sub:(i+1)*d_sub] from sklearn.cluster import KMeans kmeans = KMeans(n_clusters=2**bits_per_subvector) kmeans.fit(sub) codes = kmeans.predict(sub) quantized.append(codes) codebooks.append(kmeans.cluster_centers_) return quantized, codebooks PQ typically yields 8-16× compression with 3–6% cosine similarity error. Scalar quantization achieves 4x with ~2% error\nWhich Model For Which Problem? The Decision Matrix: # The Decision Tree: if task == \"General semantic search\": # Best isotropy (wide spread) model = \"all-MiniLM-L6-v2\" # 384d, fast, good spread why = \"Optimized for semantic similarity with good isotropy\" elif task == \"Finding similar documents\": # Trained on paraphrase data model = \"all-mpnet-base-v2\" # 768d, better for similarity why = \"Trained on paraphrase pairs, understands document similarity\" elif task == \"Question-Answer matching\": # Trained on Q\u0026A pairs model = \"multi-qa-mpnet-base-dot-v1\" why = \"Trained specifically on question-answer pairs\" elif task == \"Multilingual\": # Handles 50+ languages model = \"paraphrase-multilingual-mpnet-base-v2\" why = \"Aligned representations across languages\" elif task == \"Code search\": # Understands code syntax model = \"flax-sentence-embeddings/stackoverflow_mpnet-base\" why = \"Trained on Stack Overflow data, understands code\" elif task == \"Medical domain\": model = \"pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb\" why = \"Trained on medical literature, knows medical terminology\" elif task == \"Legal domain\": model = \"nlpaueb/legal-bert-base-uncased\" why = \"Trained on legal documents, understands legal language\" elif need_speed and not accuracy: # 5x faster, 90% accuracy model = \"all-MiniLM-L12-v2\" # Only 12 layers why = \"Distilled model, much faster with minimal accuracy loss\" elif need_accuracy and not speed: # State of the art model = \"OpenAI text-embedding-3-large\" # 3072d why = \"Largest model, best accuracy, but expensive\" 🧠 The Corrected Production Pipeline class ProductionEmbeddingPipeline: class ProductionEmbeddingPipeline: \"\"\" Scientifically accurate production pipeline \"\"\" def __init__(self, model_name='all-mpnet-base-v2'): self.model = SentenceTransformer(model_name) self.tokenizer = self.model.tokenizer # Fit whitening on your data (not random data) self.whitening_params = None # Cache with TTL self.cache = LRUCache(maxsize=10000) def fit_whitening(self, sample_texts, sample_size=10000): \"\"\" Fit whitening transformation on your domain \"\"\" # Sample your actual data distribution embeddings = self.model.encode(sample_texts[:sample_size]) # Fit whitening self.whitening_params = self._fit_whiten(embeddings) def encode(self, texts, apply_whitening=True): \"\"\" Production encoding with all fixes \"\"\" # Batch processing for efficiency if isinstance(texts, str): texts = [texts] # Check cache uncached = [] cached_results = {} for i, text in enumerate(texts): if text in self.cache: cached_results[i] = self.cache[text] else: uncached.append((i, text)) if uncached: # Encode uncached uncached_texts = [t for i, t in uncached] # Handle long texts with sliding window embeddings = [] for text in uncached_texts: if len(text.split()) \u003e 256: emb = self._encode_long(text) else: emb = self.model.encode(text) embeddings.append(emb) embeddings = np.vstack(embeddings) # Apply whitening if fitted if apply_whitening and self.whitening_params: embeddings = self._apply_whitening(embeddings) # L2 normalize (critical for cosine similarity) embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True) # Update cache for (i, text), emb in zip(uncached, embeddings): self.cache[text] = emb cached_results[i] = emb # Return in original order return np.vstack([cached_results[i] for i in range(len(texts))]) def _encode_long(self, text, window_size=256, stride=128): \"\"\" Sliding window for long texts with max pooling Max pooling preserves semantic peaks better than mean \"\"\" words = text.split() if len(words) \u003c= window_size: return self.model.encode(text) # Generate windows windows = [] for i in range(0, len(words) - window_size + 1, stride): window = ' '.join(words[i:i + window_size]) windows.append(window) # Encode all windows window_embeddings = self.model.encode(windows) # Max pool (preserves semantic peaks) # Note: Mean pooling would dilute signal return np.max(window_embeddings, axis=0) def search_with_reranking(self, query, corpus, k=10): \"\"\" Production search with reranking for accuracy \"\"\" # Step 1: Get top 100 candidates with embeddings (fast) query_emb = self.encode(query) corpus_embs = self.encode(corpus) similarities = cosine_similarity([query_emb], corpus_embs)[0] top_100_idx = np.argsort(similarities)[-100:][::-1] # Step 2: Rerank with cross-encoder (accurate) from sentence_transformers import CrossEncoder reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2') pairs = [(query, corpus[idx]) for idx in top_100_idx] scores = reranker.predict(pairs) # Step 3: Return top k after reranking reranked_idx = np.argsort(scores)[-k:][::-1] return [top_100_idx[i] for i in reranked_idx] 💥 What You Actually Need To Do Today 1. Check Your Model Choice: # Run this benchmark on YOUR data: from sentence_transformers import SentenceTransformer, util models = ['all-MiniLM-L6-v2', 'all-mpnet-base-v2', 'intfloat/e5-base-v2'] test_queries = [your actual queries] test_corpus = [your actual documents] for model_name in models: model = SentenceTransformer(model_name) # Test and measure # Key metrics: speed, recall@10, anisotropy 2. Add Hybrid Search for Domain Terms: # Combine embedding search with BM25 from rank_bm25 import BM25Okapi class HybridSearch: def __init__(self): self.encoder = SentenceTransformer('all-mpnet-base-v2') self.bm25 = None def index(self, corpus): # Tokenize for BM25 tokenized = [doc.split() for doc in corpus] self.bm25 = BM25Okapi(tokenized) # Encode for semantic self.embeddings = self.encoder.encode(corpus) def search(self, query, k=10): # BM25 scores bm25_scores = self.bm25.get_scores(query.split()) # Semantic scores query_emb = self.encoder.encode(query) semantic_scores = cosine_similarity([query_emb], self.embeddings)[0] # Combine with RRF combined_scores = self.reciprocal_rank_fusion( [bm25_scores, semantic_scores] ) return np.argsort(combined_scores)[-k:][::-1] 3. Implement Reranking: Always rerank your top results for accuracy, Embeddings for recall, cross-encoder for precision\n4. Monitor Anisotropy: # If average similarity \u003e 0.6, you have a problem embeddings = model.encode(sample_of_your_corpus) avg_sim = cosine_similarity(embeddings).mean() print(f\"Anisotropy check: {avg_sim}\") if avg_sim \u003e 0.6: print(\"WARNING: High anisotropy detected. Consider whitening or different model\") ⚖️ The Scientifically Accurate Truth Anisotropy is caused by optimization dynamics, not “common words.” CLS attention follows positional biases, not “inattention.” Length bias arises from semantic dilution, not the CLT. Subword tokenization breaks semantic composition, not “wrong embeddings.” Quantization errors are non-uniform across the embedding space. Whitening must be fit on your data, not borrowed blindly. 🧩 Final Insight We’re compressing variable-length discrete sequences into fixed-size continuous vectors.\nInformation loss is inevitable.\nThe goal isn’t perfect semantics it’s to minimize task-relevant information loss.\n",
+  "wordCount" : "2145",
+  "inLanguage": "en",
+  "datePublished": "2025-10-03T00:10:39+05:30",
+  "dateModified": "2025-10-03T00:10:39+05:30",
+  "author":{
+    "@type": "Person",
+    "name": "Lakshay Chhabra"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lucven.com/posts/embeddings/embeddings_intro/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lucven AI",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lucven.com/favicon_io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class=" dark" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lucven.com/" accesskey="h" title="Lucven AI (Alt + H)">Lucven AI</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lucven.com/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/archives/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lucven.com/">Home</a>&nbsp;»&nbsp;<a href="https://lucven.com/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
+      How Words Become Vectors: Embeddings Inside Transformers (Without Tears)
+    </h1>
+    <div class="post-meta"><span title='2025-10-03 00:10:39 +0530 IST'>October 3, 2025</span>&nbsp;·&nbsp;11 min&nbsp;·&nbsp;Lakshay Chhabra
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#how-words-become-vectors-embeddings-inside-transformers-without-tears" aria-label="How Words Become Vectors: Embeddings Inside Transformers (Without Tears)">How Words Become Vectors: Embeddings Inside Transformers (Without Tears)</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#tldr" aria-label="TL;DR:">TL;DR:</a></li></ul>
+                    
+                <li>
+                    <a href="#-the-architecture-what-libraries-handle-vs-what-you-handle" aria-label="🎯 The Architecture: What Libraries Handle vs What You Handle">🎯 The Architecture: What Libraries Handle vs What You Handle</a><ul>
+                        
+                <li>
+                    <a href="#what-sentencetransformersopenai-api-handle-for-you" aria-label="What SentenceTransformers/OpenAI API handle for you:">What SentenceTransformers/OpenAI API handle for you:</a></li>
+                <li>
+                    <a href="#what-you-still-need-to-handle" aria-label="What you still need to handle:">What you still need to handle:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-cls-token-design-vs-reality" aria-label="💀 The CLS Token: Design vs Reality">💀 The CLS Token: Design vs Reality</a><ul>
+                        
+                <li>
+                    <a href="#what-libraries-are-actually-doing" aria-label="What Libraries Are Actually Doing">What Libraries Are Actually Doing</a></li>
+                <li>
+                    <a href="#historical-context" aria-label="Historical context:">Historical context:</a></li>
+                <li>
+                    <a href="#technical-correction" aria-label="Technical correction:">Technical correction:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-domain-vocabulary-problem" aria-label="🔥 The Domain Vocabulary Problem">🔥 The Domain Vocabulary Problem</a><ul>
+                        
+                <li>
+                    <a href="#the-real-issue-subword-tokenization-vs-semantic-units" aria-label="The Real Issue: Subword Tokenization vs Semantic Units">The Real Issue: Subword Tokenization vs Semantic Units</a></li>
+                <li>
+                    <a href="#why-averaging-fails" aria-label="Why Averaging Fails">Why Averaging Fails</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-production-fixes" aria-label="✅ Production Fixes">✅ Production Fixes</a><ul>
+                        
+                <li>
+                    <a href="#fix-1-subword-pooling-with-positional-awareness" aria-label="Fix 1: Subword Pooling with Positional Awareness">Fix 1: Subword Pooling with Positional Awareness</a></li>
+                <li>
+                    <a href="#fix-2-contrastive-fine-tuning-what-actually-works-at-scale" aria-label="Fix 2: Contrastive Fine-Tuning (What Actually Works at Scale)">Fix 2: Contrastive Fine-Tuning (What Actually Works at Scale)</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-anisotropy-problem-mathematically-correct" aria-label="🌡️ The Anisotropy Problem (Mathematically Correct)">🌡️ The Anisotropy Problem (Mathematically Correct)</a><ul>
+                        
+                <li>
+                    <a href="#what-it-actually-means" aria-label="What It Actually Means">What It Actually Means</a></li>
+                <li>
+                    <a href="#why-it-happens" aria-label="Why It Happens">Why It Happens</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-whitening-fix" aria-label="⚙️ The Whitening Fix">⚙️ The Whitening Fix</a></li>
+                <li>
+                    <a href="#-the-length-bias-problem" aria-label="📏 The Length Bias Problem">📏 The Length Bias Problem</a><ul>
+                        
+                <li>
+                    <a href="#fix-weighted-pooling" aria-label="Fix: Weighted Pooling">Fix: Weighted Pooling</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-quantization-the-real-math" aria-label="🧮 Quantization: The Real Math">🧮 Quantization: The Real Math</a><ul>
+                        
+                <li>
+                    <a href="#scalar-quantization-int8" aria-label="Scalar Quantization (int8)">Scalar Quantization (int8)</a></li>
+                <li>
+                    <a href="#product-quantization-pq" aria-label="Product Quantization (PQ)">Product Quantization (PQ)</a></li></ul>
+                </li>
+                <li>
+                    <a href="#which-model-for-which-problem" aria-label="Which Model For Which Problem?">Which Model For Which Problem?</a><ul>
+                        
+                <li>
+                    <a href="#the-decision-matrix" aria-label="The Decision Matrix:">The Decision Matrix:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-corrected-production-pipeline" aria-label="🧠 The Corrected Production Pipeline">🧠 The Corrected Production Pipeline</a></li>
+                <li>
+                    <a href="#-what-you-actually-need-to-do-today" aria-label="💥 What You Actually Need To Do Today">💥 What You Actually Need To Do Today</a><ul>
+                        
+                <li>
+                    <a href="#1-check-your-model-choice" aria-label="1. Check Your Model Choice:">1. Check Your Model Choice:</a></li>
+                <li>
+                    <a href="#2-add-hybrid-search-for-domain-terms" aria-label="2. Add Hybrid Search for Domain Terms:">2. Add Hybrid Search for Domain Terms:</a></li>
+                <li>
+                    <a href="#3-implement-reranking" aria-label="3. Implement Reranking:">3. Implement Reranking:</a></li>
+                <li>
+                    <a href="#4-monitor-anisotropy" aria-label="4. Monitor Anisotropy:">4. Monitor Anisotropy:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-scientifically-accurate-truth" aria-label="⚖️ The Scientifically Accurate Truth">⚖️ The Scientifically Accurate Truth</a><ul>
+                        
+                <li>
+                    <a href="#-final-insight" aria-label="🧩 Final Insight">🧩 Final Insight</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="how-words-become-vectors-embeddings-inside-transformers-without-tears">How Words Become Vectors: Embeddings Inside Transformers (Without Tears)<a hidden class="anchor" aria-hidden="true" href="#how-words-become-vectors-embeddings-inside-transformers-without-tears">#</a></h1>
+<blockquote>
+<p>“Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”</p></blockquote>
+<h3 id="tldr">TL;DR:<a hidden class="anchor" aria-hidden="true" href="#tldr">#</a></h3>
+<p>Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units).
+This guide shows what’s breaking, what’s already fixed, and what you still need to handle.</p>
+<h2 id="-the-architecture-what-libraries-handle-vs-what-you-handle">🎯 The Architecture: What Libraries Handle vs What You Handle<a hidden class="anchor" aria-hidden="true" href="#-the-architecture-what-libraries-handle-vs-what-you-handle">#</a></h2>
+<h3 id="what-sentencetransformersopenai-api-handle-for-you">What SentenceTransformers/OpenAI API handle for you:<a hidden class="anchor" aria-hidden="true" href="#what-sentencetransformersopenai-api-handle-for-you">#</a></h3>
+<p>✅ CLS vs mean pooling</p>
+<p>✅ Padding token exclusion</p>
+<p>✅ Special token handling</p>
+<p>✅ Layer selection</p>
+<p>✅ L2 normalization</p>
+<h3 id="what-you-still-need-to-handle">What you still need to handle:<a hidden class="anchor" aria-hidden="true" href="#what-you-still-need-to-handle">#</a></h3>
+<p>❌ Anisotropic distribution (vectors in narrow cones)</p>
+<p>❌ Length-dependent magnitude bias</p>
+<p>❌ Domain-specific tokenization failures</p>
+<p>❌ Quantization errors</p>
+<p>❌ Task-appropriate model selection</p>
+<h2 id="-the-cls-token-design-vs-reality">💀 The CLS Token: Design vs Reality<a hidden class="anchor" aria-hidden="true" href="#-the-cls-token-design-vs-reality">#</a></h2>
+<h3 id="what-libraries-are-actually-doing">What Libraries Are Actually Doing<a hidden class="anchor" aria-hidden="true" href="#what-libraries-are-actually-doing">#</a></h3>
+<h3 id="historical-context">Historical context:<a hidden class="anchor" aria-hidden="true" href="#historical-context">#</a></h3>
+<p>BERT was pre-trained with Next Sentence Prediction (NSP), where [CLS] aggregated sentence-level information.
+That made sense for classification but fails for semantic similarity.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># BERT&#39;s original training (2018):</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># [CLS] was trained to predict if sentence B follows sentence A</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># This biases CLS toward boundary/classification signals, not semantics</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Modern sentence encoders (2020+):</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> sentence_transformers <span style="color:#f92672">import</span> SentenceTransformer
+</span></span><span style="display:flex;"><span>model <span style="color:#f92672">=</span> SentenceTransformer(<span style="color:#e6db74">&#39;all-MiniLM-L6-v2&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>print(model[<span style="color:#ae81ff">1</span>]<span style="color:#f92672">.</span>pooling_mode_mean_tokens)  <span style="color:#75715e"># True</span>
+</span></span><span style="display:flex;"><span>print(model[<span style="color:#ae81ff">1</span>]<span style="color:#f92672">.</span>pooling_mode_cls_token)    <span style="color:#75715e"># False</span>
+</span></span></code></pre></div><h3 id="technical-correction">Technical correction:<a hidden class="anchor" aria-hidden="true" href="#technical-correction">#</a></h3>
+<p>CLS doesn’t “stop paying attention.” It develops fixed attention patterns during pre-training, emphasizing early tokens due to bias in attention distributions.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># CLS attention follows a power-law decay</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> numpy <span style="color:#66d9ef">as</span> np
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>position <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>arange(<span style="color:#ae81ff">512</span>)
+</span></span><span style="display:flex;"><span>attention_weight <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">/</span> (<span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">0.1</span> <span style="color:#f92672">*</span> position)
+</span></span><span style="display:flex;"><span>attention_weight <span style="color:#f92672">/=</span> attention_weight<span style="color:#f92672">.</span>sum()
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Position Range</th>
+          <th>Total Attention</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0–10</td>
+          <td>31%</td>
+      </tr>
+      <tr>
+          <td>11–50</td>
+          <td>42%</td>
+      </tr>
+      <tr>
+          <td>51–100</td>
+          <td>18%</td>
+      </tr>
+      <tr>
+          <td>100+</td>
+          <td>9%</td>
+      </tr>
+  </tbody>
+</table>
+<p>It’s not “giving up” it’s <strong>learned positional bias</strong>.</p>
+<hr>
+<h2 id="-the-domain-vocabulary-problem">🔥 The Domain Vocabulary Problem<a hidden class="anchor" aria-hidden="true" href="#-the-domain-vocabulary-problem">#</a></h2>
+<h3 id="the-real-issue-subword-tokenization-vs-semantic-units">The Real Issue: Subword Tokenization vs Semantic Units<a hidden class="anchor" aria-hidden="true" href="#the-real-issue-subword-tokenization-vs-semantic-units">#</a></h3>
+<p>The problem isn’t that subword fragments get “wrong” embeddings, it’s that their <strong>compositional semantics don’t equal the learned semantics</strong> of the full token.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Mathematically:</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># embed(&#34;DataForce&#34;) ≠ f(embed(&#34;Data&#34;), embed(&#34;Force&#34;))</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># for any simple function f (mean, sum, concat)</span>
+</span></span></code></pre></div><p>Reasons:</p>
+<ol>
+<li>“DataForce” as a single token might have appeared in training.</li>
+<li>Split tokens trigger different attention patterns.</li>
+<li>Positional encodings differ (1 vs 2 positions).</li>
+<li>Attention heads specialize around token boundaries.</li>
+</ol>
+<p>Even if “DataForce” never appeared, its composed meaning is <strong>context-dependent</strong> and <strong>unstable</strong> across uses.</p>
+<h3 id="why-averaging-fails">Why Averaging Fails<a hidden class="anchor" aria-hidden="true" href="#why-averaging-fails">#</a></h3>
+<p>The embedding space is <strong>non-linear</strong> and <strong>anisotropic</strong>, so averaging subword vectors rarely preserves meaning.<br>
+Midpoints land in semantically meaningless regions of the manifold.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># The embedding space is non-linear and anisotropic</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Given embeddings in ℝ^d:</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>v_compound <span style="color:#f92672">=</span> embed(<span style="color:#e6db74">&#34;DataForce&#34;</span>)  <span style="color:#75715e"># If it existed as single token</span>
+</span></span><span style="display:flex;"><span>v_data <span style="color:#f92672">=</span> embed(<span style="color:#e6db74">&#34;Data&#34;</span>)
+</span></span><span style="display:flex;"><span>v_force <span style="color:#f92672">=</span> embed(<span style="color:#e6db74">&#34;Force&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># The average (v_data + v_force)/2 assumes:</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 1. Linear interpolation preserves semantics (FALSE)</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. The space between points is semantically meaningful (FALSE)</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 3. Composition is additive (FALSE)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># In reality, the manifold is highly curved</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># The midpoint often lands in a semantically different region</span>
+</span></span></code></pre></div><hr>
+<h2 id="-production-fixes">✅ Production Fixes<a hidden class="anchor" aria-hidden="true" href="#-production-fixes">#</a></h2>
+<h3 id="fix-1-subword-pooling-with-positional-awareness">Fix 1: Subword Pooling with Positional Awareness<a hidden class="anchor" aria-hidden="true" href="#fix-1-subword-pooling-with-positional-awareness">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">subword_aware_pooling</span>(token_embeddings, word_ids, attention_mask):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Pool subwords back to word level before sentence pooling.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    word_embeddings, current_embeddings <span style="color:#f92672">=</span> [], []
+</span></span><span style="display:flex;"><span>    current_word <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i, word_id <span style="color:#f92672">in</span> enumerate(word_ids):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> word_id <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> word_id <span style="color:#f92672">!=</span> current_word:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> current_embeddings:
+</span></span><span style="display:flex;"><span>                word_embeddings<span style="color:#f92672">.</span>append(torch<span style="color:#f92672">.</span>stack(current_embeddings)<span style="color:#f92672">.</span>mean(<span style="color:#ae81ff">0</span>))
+</span></span><span style="display:flex;"><span>            current_word <span style="color:#f92672">=</span> word_id
+</span></span><span style="display:flex;"><span>            current_embeddings <span style="color:#f92672">=</span> [token_embeddings[i]]
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            current_embeddings<span style="color:#f92672">.</span>append(token_embeddings[i])
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> current_embeddings:
+</span></span><span style="display:flex;"><span>        word_embeddings<span style="color:#f92672">.</span>append(torch<span style="color:#f92672">.</span>stack(current_embeddings)<span style="color:#f92672">.</span>mean(<span style="color:#ae81ff">0</span>))
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> torch<span style="color:#f92672">.</span>stack(word_embeddings)<span style="color:#f92672">.</span>mean(<span style="color:#ae81ff">0</span>)
+</span></span></code></pre></div><h3 id="fix-2-contrastive-fine-tuning-what-actually-works-at-scale">Fix 2: Contrastive Fine-Tuning (What Actually Works at Scale)<a hidden class="anchor" aria-hidden="true" href="#fix-2-contrastive-fine-tuning-what-actually-works-at-scale">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> sentence_transformers <span style="color:#f92672">import</span> SentenceTransformer, InputExample, losses
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> torch.utils.data <span style="color:#f92672">import</span> DataLoader
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model <span style="color:#f92672">=</span> SentenceTransformer(<span style="color:#e6db74">&#39;all-mpnet-base-v2&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>train_examples <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>    InputExample(texts<span style="color:#f92672">=</span>[<span style="color:#e6db74">&#39;DataForce quarterly report&#39;</span>, <span style="color:#e6db74">&#39;DataForce Q3 earnings&#39;</span>], label<span style="color:#f92672">=</span><span style="color:#ae81ff">0.9</span>),
+</span></span><span style="display:flex;"><span>    InputExample(texts<span style="color:#f92672">=</span>[<span style="color:#e6db74">&#39;DataForce analysis&#39;</span>, <span style="color:#e6db74">&#39;Data Force military&#39;</span>], label<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>),
+</span></span><span style="display:flex;"><span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>train_dataloader <span style="color:#f92672">=</span> DataLoader(train_examples, shuffle<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, batch_size<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>train_loss <span style="color:#f92672">=</span> losses<span style="color:#f92672">.</span>MultipleNegativesRankingLoss(model)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model<span style="color:#f92672">.</span>fit(train_objectives<span style="color:#f92672">=</span>[(train_dataloader, train_loss)], epochs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, warmup_steps<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>)
+</span></span></code></pre></div><p>Now “DataForce” has consistent representation regardless of tokenization.</p>
+<hr>
+<h2 id="-the-anisotropy-problem-mathematically-correct">🌡️ The Anisotropy Problem (Mathematically Correct)<a hidden class="anchor" aria-hidden="true" href="#-the-anisotropy-problem-mathematically-correct">#</a></h2>
+<h3 id="what-it-actually-means">What It Actually Means<a hidden class="anchor" aria-hidden="true" href="#what-it-actually-means">#</a></h3>
+<p><strong>Definition:</strong> Anisotropy = embeddings cluster in a narrow cone of the hypersphere instead of spreading uniformly.</p>
+<pre tabindex="0"><code>What you expect (isotropic - good):
+        *     *
+    *             *
+  *                 *
+*                     *
+  *                 *
+    *             *
+        *     *
+   (Embeddings spread evenly)
+
+What you get (anisotropic - bad):
+           ..
+         .:::.
+        .::::.
+         &#39;::&#39;
+   (All embeddings in narrow cone)
+</code></pre><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">measure_anisotropy</span>(embeddings):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Measures how uniformly embeddings fill the space.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Returns isotropy score: 0 = highly anisotropic, 1 = perfectly isotropic.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    normalized <span style="color:#f92672">=</span> embeddings <span style="color:#f92672">/</span> np<span style="color:#f92672">.</span>linalg<span style="color:#f92672">.</span>norm(embeddings, axis<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, keepdims<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    similarities <span style="color:#f92672">=</span> normalized <span style="color:#f92672">@</span> normalized<span style="color:#f92672">.</span>T
+</span></span><span style="display:flex;"><span>    d <span style="color:#f92672">=</span> embeddings<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">1</span>]
+</span></span><span style="display:flex;"><span>    expected_var <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">/</span> d
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    mask <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>np<span style="color:#f92672">.</span>eye(similarities<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>], dtype<span style="color:#f92672">=</span>bool)
+</span></span><span style="display:flex;"><span>    off_diagonal <span style="color:#f92672">=</span> similarities[mask]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    actual_mean <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>mean(off_diagonal)
+</span></span><span style="display:flex;"><span>    actual_var <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>var(off_diagonal)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    mean_isotropy <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> abs(actual_mean)
+</span></span><span style="display:flex;"><span>    var_isotropy <span style="color:#f92672">=</span> min(actual_var <span style="color:#f92672">/</span> expected_var, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> (mean_isotropy <span style="color:#f92672">+</span> var_isotropy) <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Model</th>
+          <th>Isotropy Score</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>BERT</td>
+          <td>0.31</td>
+      </tr>
+      <tr>
+          <td>all-MiniLM-L6-v2</td>
+          <td>0.67</td>
+      </tr>
+      <tr>
+          <td>all-mpnet-base-v2</td>
+          <td>0.71</td>
+      </tr>
+      <tr>
+          <td>SimCSE</td>
+          <td>0.84</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="why-it-happens">Why It Happens<a hidden class="anchor" aria-hidden="true" href="#why-it-happens">#</a></h3>
+<p>During softmax training, models minimize:</p>
+<pre tabindex="0"><code>p(correct|q) = exp(sim(q, d+)) / Σ exp(sim(q, d))
+</code></pre><p>To stabilize the denominator, models <strong>compress embeddings</strong> into a narrow cone, increasing the average similarity across all pairs.<br>
+This is a side-effect of optimization dynamics, not vocabulary frequency.</p>
+<pre tabindex="0"><code># During training with softmax loss:
+# p(correct|query) = exp(sim(q,d+)) / Σ exp(sim(q,d))
+
+# To minimize loss, model learns:
+# 1. Push positive pairs together
+# 2. BUT: denominator includes ALL negatives
+# 3. Easiest solution: compress all vectors to small region
+# 4. This maximizes average similarity, making denominator predictable
+
+# Mathematical proof (simplified):
+# Given uniformly sampled negatives on unit sphere
+# Expected cosine similarity E[cos(θ)] in d dimensions = 0
+# But if all vectors in cone of angle α:
+# E[cos(θ)] = cos(α) &gt; 0
+# This reduces variance in denominator, stabilizing training
+</code></pre><hr>
+<h2 id="-the-whitening-fix">⚙️ The Whitening Fix<a hidden class="anchor" aria-hidden="true" href="#-the-whitening-fix">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">whiten_embeddings</span>(embeddings, eps<span style="color:#f92672">=</span><span style="color:#ae81ff">1e-6</span>):
+</span></span><span style="display:flex;"><span>    mean <span style="color:#f92672">=</span> embeddings<span style="color:#f92672">.</span>mean(<span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>    centered <span style="color:#f92672">=</span> embeddings <span style="color:#f92672">-</span> mean
+</span></span><span style="display:flex;"><span>    cov <span style="color:#f92672">=</span> (centered<span style="color:#f92672">.</span>T <span style="color:#f92672">@</span> centered) <span style="color:#f92672">/</span> (len(centered) <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>    eigvals, eigvecs <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>linalg<span style="color:#f92672">.</span>eigh(cov)
+</span></span><span style="display:flex;"><span>    W <span style="color:#f92672">=</span> eigvecs <span style="color:#f92672">@</span> np<span style="color:#f92672">.</span>diag(<span style="color:#ae81ff">1</span><span style="color:#f92672">/</span>np<span style="color:#f92672">.</span>sqrt(eigvals <span style="color:#f92672">+</span> eps)) <span style="color:#f92672">@</span> eigvecs<span style="color:#f92672">.</span>T
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> centered <span style="color:#f92672">@</span> W, mean, W
+</span></span></code></pre></div><blockquote>
+<p>Always apply the same <code>mean</code> and <code>W</code> at inference.<br>
+Whitening must be <strong>fit on your distribution</strong>, not applied blindly.</p></blockquote>
+<hr>
+<h2 id="-the-length-bias-problem">📏 The Length Bias Problem<a hidden class="anchor" aria-hidden="true" href="#-the-length-bias-problem">#</a></h2>
+<p>It’s not the Central Limit Theorem: it’s <strong>semantic dilution</strong>.<br>
+Mean pooling assigns equal weight to all tokens, so meaningful ones get drowned out.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Short text (3 tokens): (v1 + v2 + v3) / 3 → 33% per token</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Long text (100 tokens): (v1 + ... + v100) / 100 → 1% per token</span>
+</span></span></code></pre></div><pre tabindex="0"><code># The actual mechanism:
+# 1. Longer sequences have more tokens
+# 2. Attention is roughly uniform (after many layers)
+# 3. Mean pooling weights each token equally
+# 4. More tokens = each individual token contributes less
+# 5. Outlier tokens (carrying key semantics) get diluted
+
+# Mathematical formulation:
+# Short text: v_short = (v1 + v2 + v3) / 3
+# If v2 is semantic key: contribution = 33%
+
+# Long text: v_long = (v1 + ... + v100) / 100  
+# If v50 is semantic key: contribution = 1%
+
+# The semantic signal gets diluted, not &#34;converged to mean&#34;
+</code></pre><h3 id="fix-weighted-pooling">Fix: Weighted Pooling<a hidden class="anchor" aria-hidden="true" href="#fix-weighted-pooling">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">weighted_pooling</span>(token_embeddings, attention_mask, attention_weights<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Use attention weights for importance-weighted pooling.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> attention_weights <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        attention_weights <span style="color:#f92672">=</span> model(<span style="color:#f92672">**</span>inputs, output_attentions<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)<span style="color:#f92672">.</span>attentions[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]
+</span></span><span style="display:flex;"><span>        attention_weights <span style="color:#f92672">=</span> attention_weights<span style="color:#f92672">.</span>mean(dim<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)[:, <span style="color:#ae81ff">0</span>, :]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    attention_weights <span style="color:#f92672">=</span> attention_weights <span style="color:#f92672">*</span> attention_mask
+</span></span><span style="display:flex;"><span>    attention_weights <span style="color:#f92672">=</span> attention_weights <span style="color:#f92672">/</span> attention_weights<span style="color:#f92672">.</span>sum(dim<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, keepdim<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    weighted <span style="color:#f92672">=</span> (token_embeddings <span style="color:#f92672">*</span> attention_weights<span style="color:#f92672">.</span>unsqueeze(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>))<span style="color:#f92672">.</span>sum(dim<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> weighted
+</span></span></code></pre></div><hr>
+<h2 id="-quantization-the-real-math">🧮 Quantization: The Real Math<a hidden class="anchor" aria-hidden="true" href="#-quantization-the-real-math">#</a></h2>
+<h3 id="scalar-quantization-int8">Scalar Quantization (int8)<a hidden class="anchor" aria-hidden="true" href="#scalar-quantization-int8">#</a></h3>
+<p>Scalar quantization and product quantization work differently:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">scalar_quantize</span>(embeddings):
+</span></span><span style="display:flex;"><span>    scale <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>percentile(np<span style="color:#f92672">.</span>abs(embeddings), <span style="color:#ae81ff">95</span>)
+</span></span><span style="display:flex;"><span>    quantized <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>clip(embeddings <span style="color:#f92672">/</span> scale <span style="color:#f92672">*</span> <span style="color:#ae81ff">127</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">128</span>, <span style="color:#ae81ff">127</span>)<span style="color:#f92672">.</span>astype(np<span style="color:#f92672">.</span>int8)
+</span></span><span style="display:flex;"><span>    dequantized <span style="color:#f92672">=</span> quantized<span style="color:#f92672">.</span>astype(np<span style="color:#f92672">.</span>float32) <span style="color:#f92672">*</span> scale <span style="color:#f92672">/</span> <span style="color:#ae81ff">127</span>
+</span></span><span style="display:flex;"><span>    mse <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>mean((embeddings <span style="color:#f92672">-</span> dequantized) <span style="color:#f92672">**</span> <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> quantized, scale, mse
+</span></span></code></pre></div><h3 id="product-quantization-pq">Product Quantization (PQ)<a hidden class="anchor" aria-hidden="true" href="#product-quantization-pq">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">product_quantize</span>(embeddings, num_subvectors<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, bits_per_subvector<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Split vector into subvectors and quantize each independently.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    d <span style="color:#f92672">=</span> embeddings<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">1</span>]
+</span></span><span style="display:flex;"><span>    d_sub <span style="color:#f92672">=</span> d <span style="color:#f92672">//</span> num_subvectors
+</span></span><span style="display:flex;"><span>    quantized, codebooks <span style="color:#f92672">=</span> [], []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(num_subvectors):
+</span></span><span style="display:flex;"><span>        sub <span style="color:#f92672">=</span> embeddings[:, i<span style="color:#f92672">*</span>d_sub:(i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">*</span>d_sub]
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">from</span> sklearn.cluster <span style="color:#f92672">import</span> KMeans
+</span></span><span style="display:flex;"><span>        kmeans <span style="color:#f92672">=</span> KMeans(n_clusters<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>bits_per_subvector)
+</span></span><span style="display:flex;"><span>        kmeans<span style="color:#f92672">.</span>fit(sub)
+</span></span><span style="display:flex;"><span>        codes <span style="color:#f92672">=</span> kmeans<span style="color:#f92672">.</span>predict(sub)
+</span></span><span style="display:flex;"><span>        quantized<span style="color:#f92672">.</span>append(codes)
+</span></span><span style="display:flex;"><span>        codebooks<span style="color:#f92672">.</span>append(kmeans<span style="color:#f92672">.</span>cluster_centers_)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> quantized, codebooks
+</span></span></code></pre></div><blockquote>
+<p>PQ typically yields <strong>8-16× compression</strong> with <strong>3–6% cosine similarity error</strong>.
+Scalar quantization achieves 4x with ~2% error</p></blockquote>
+<hr>
+<h2 id="which-model-for-which-problem">Which Model For Which Problem?<a hidden class="anchor" aria-hidden="true" href="#which-model-for-which-problem">#</a></h2>
+<h3 id="the-decision-matrix">The Decision Matrix:<a hidden class="anchor" aria-hidden="true" href="#the-decision-matrix">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># The Decision Tree:</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;General semantic search&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Best isotropy (wide spread)</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;all-MiniLM-L6-v2&#34;</span>  <span style="color:#75715e"># 384d, fast, good spread</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Optimized for semantic similarity with good isotropy&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;Finding similar documents&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Trained on paraphrase data</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;all-mpnet-base-v2&#34;</span>  <span style="color:#75715e"># 768d, better for similarity</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Trained on paraphrase pairs, understands document similarity&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;Question-Answer matching&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Trained on Q&amp;A pairs</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;multi-qa-mpnet-base-dot-v1&#34;</span>  
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Trained specifically on question-answer pairs&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;Multilingual&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Handles 50+ languages</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;paraphrase-multilingual-mpnet-base-v2&#34;</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Aligned representations across languages&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;Code search&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Understands code syntax</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;flax-sentence-embeddings/stackoverflow_mpnet-base&#34;</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Trained on Stack Overflow data, understands code&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;Medical domain&#34;</span>:
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb&#34;</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Trained on medical literature, knows medical terminology&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> task <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;Legal domain&#34;</span>:
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nlpaueb/legal-bert-base-uncased&#34;</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Trained on legal documents, understands legal language&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> need_speed <span style="color:#f92672">and</span> <span style="color:#f92672">not</span> accuracy:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 5x faster, 90% accuracy</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;all-MiniLM-L12-v2&#34;</span>  <span style="color:#75715e"># Only 12 layers</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Distilled model, much faster with minimal accuracy loss&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> need_accuracy <span style="color:#f92672">and</span> <span style="color:#f92672">not</span> speed:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># State of the art</span>
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;OpenAI text-embedding-3-large&#34;</span>  <span style="color:#75715e"># 3072d</span>
+</span></span><span style="display:flex;"><span>    why <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Largest model, best accuracy, but expensive&#34;</span>
+</span></span></code></pre></div><h2 id="-the-corrected-production-pipeline">🧠 The Corrected Production Pipeline<a hidden class="anchor" aria-hidden="true" href="#-the-corrected-production-pipeline">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ProductionEmbeddingPipeline</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ProductionEmbeddingPipeline</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Scientifically accurate production pipeline
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self, model_name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;all-mpnet-base-v2&#39;</span>):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>model <span style="color:#f92672">=</span> SentenceTransformer(model_name)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>tokenizer <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>model<span style="color:#f92672">.</span>tokenizer
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Fit whitening on your data (not random data)</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>whitening_params <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Cache with TTL</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>cache <span style="color:#f92672">=</span> LRUCache(maxsize<span style="color:#f92672">=</span><span style="color:#ae81ff">10000</span>)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">fit_whitening</span>(self, sample_texts, sample_size<span style="color:#f92672">=</span><span style="color:#ae81ff">10000</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Fit whitening transformation on your domain
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Sample your actual data distribution</span>
+</span></span><span style="display:flex;"><span>        embeddings <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>model<span style="color:#f92672">.</span>encode(sample_texts[:sample_size])
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Fit whitening</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>whitening_params <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_fit_whiten(embeddings)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">encode</span>(self, texts, apply_whitening<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Production encoding with all fixes
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Batch processing for efficiency</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(texts, str):
+</span></span><span style="display:flex;"><span>            texts <span style="color:#f92672">=</span> [texts]
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Check cache</span>
+</span></span><span style="display:flex;"><span>        uncached <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>        cached_results <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i, text <span style="color:#f92672">in</span> enumerate(texts):
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> text <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>cache:
+</span></span><span style="display:flex;"><span>                cached_results[i] <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>cache[text]
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>                uncached<span style="color:#f92672">.</span>append((i, text))
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> uncached:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Encode uncached</span>
+</span></span><span style="display:flex;"><span>            uncached_texts <span style="color:#f92672">=</span> [t <span style="color:#66d9ef">for</span> i, t <span style="color:#f92672">in</span> uncached]
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Handle long texts with sliding window</span>
+</span></span><span style="display:flex;"><span>            embeddings <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> text <span style="color:#f92672">in</span> uncached_texts:
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> len(text<span style="color:#f92672">.</span>split()) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">256</span>:
+</span></span><span style="display:flex;"><span>                    emb <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_encode_long(text)
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>                    emb <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>model<span style="color:#f92672">.</span>encode(text)
+</span></span><span style="display:flex;"><span>                embeddings<span style="color:#f92672">.</span>append(emb)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            embeddings <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>vstack(embeddings)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Apply whitening if fitted</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> apply_whitening <span style="color:#f92672">and</span> self<span style="color:#f92672">.</span>whitening_params:
+</span></span><span style="display:flex;"><span>                embeddings <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_apply_whitening(embeddings)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># L2 normalize (critical for cosine similarity)</span>
+</span></span><span style="display:flex;"><span>            embeddings <span style="color:#f92672">=</span> embeddings <span style="color:#f92672">/</span> np<span style="color:#f92672">.</span>linalg<span style="color:#f92672">.</span>norm(embeddings, axis<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, keepdims<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Update cache</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> (i, text), emb <span style="color:#f92672">in</span> zip(uncached, embeddings):
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>cache[text] <span style="color:#f92672">=</span> emb
+</span></span><span style="display:flex;"><span>                cached_results[i] <span style="color:#f92672">=</span> emb
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Return in original order</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> np<span style="color:#f92672">.</span>vstack([cached_results[i] <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(len(texts))])
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_encode_long</span>(self, text, window_size<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, stride<span style="color:#f92672">=</span><span style="color:#ae81ff">128</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Sliding window for long texts with max pooling
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Max pooling preserves semantic peaks better than mean
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        words <span style="color:#f92672">=</span> text<span style="color:#f92672">.</span>split()
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> len(words) <span style="color:#f92672">&lt;=</span> window_size:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>model<span style="color:#f92672">.</span>encode(text)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Generate windows</span>
+</span></span><span style="display:flex;"><span>        windows <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">0</span>, len(words) <span style="color:#f92672">-</span> window_size <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>, stride):
+</span></span><span style="display:flex;"><span>            window <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39; &#39;</span><span style="color:#f92672">.</span>join(words[i:i <span style="color:#f92672">+</span> window_size])
+</span></span><span style="display:flex;"><span>            windows<span style="color:#f92672">.</span>append(window)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Encode all windows</span>
+</span></span><span style="display:flex;"><span>        window_embeddings <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>model<span style="color:#f92672">.</span>encode(windows)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Max pool (preserves semantic peaks)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Note: Mean pooling would dilute signal</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> np<span style="color:#f92672">.</span>max(window_embeddings, axis<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">search_with_reranking</span>(self, query, corpus, k<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Production search with reranking for accuracy
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Step 1: Get top 100 candidates with embeddings (fast)</span>
+</span></span><span style="display:flex;"><span>        query_emb <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>encode(query)
+</span></span><span style="display:flex;"><span>        corpus_embs <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>encode(corpus)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        similarities <span style="color:#f92672">=</span> cosine_similarity([query_emb], corpus_embs)[<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>        top_100_idx <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>argsort(similarities)[<span style="color:#f92672">-</span><span style="color:#ae81ff">100</span>:][::<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Step 2: Rerank with cross-encoder (accurate)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">from</span> sentence_transformers <span style="color:#f92672">import</span> CrossEncoder
+</span></span><span style="display:flex;"><span>        reranker <span style="color:#f92672">=</span> CrossEncoder(<span style="color:#e6db74">&#39;cross-encoder/ms-marco-MiniLM-L-6-v2&#39;</span>)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        pairs <span style="color:#f92672">=</span> [(query, corpus[idx]) <span style="color:#66d9ef">for</span> idx <span style="color:#f92672">in</span> top_100_idx]
+</span></span><span style="display:flex;"><span>        scores <span style="color:#f92672">=</span> reranker<span style="color:#f92672">.</span>predict(pairs)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Step 3: Return top k after reranking</span>
+</span></span><span style="display:flex;"><span>        reranked_idx <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>argsort(scores)[<span style="color:#f92672">-</span>k:][::<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> [top_100_idx[i] <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> reranked_idx]
+</span></span></code></pre></div><hr>
+<h2 id="-what-you-actually-need-to-do-today">💥 What You Actually Need To Do Today<a hidden class="anchor" aria-hidden="true" href="#-what-you-actually-need-to-do-today">#</a></h2>
+<h3 id="1-check-your-model-choice">1. Check Your Model Choice:<a hidden class="anchor" aria-hidden="true" href="#1-check-your-model-choice">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Run this benchmark on YOUR data:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> sentence_transformers <span style="color:#f92672">import</span> SentenceTransformer, util
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>models <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#39;all-MiniLM-L6-v2&#39;</span>, <span style="color:#e6db74">&#39;all-mpnet-base-v2&#39;</span>, <span style="color:#e6db74">&#39;intfloat/e5-base-v2&#39;</span>]
+</span></span><span style="display:flex;"><span>test_queries <span style="color:#f92672">=</span> [your actual queries]
+</span></span><span style="display:flex;"><span>test_corpus <span style="color:#f92672">=</span> [your actual documents]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> model_name <span style="color:#f92672">in</span> models:
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> SentenceTransformer(model_name)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Test and measure</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Key metrics: speed, recall@10, anisotropy</span>
+</span></span></code></pre></div><h3 id="2-add-hybrid-search-for-domain-terms">2. Add Hybrid Search for Domain Terms:<a hidden class="anchor" aria-hidden="true" href="#2-add-hybrid-search-for-domain-terms">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Combine embedding search with BM25</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> rank_bm25 <span style="color:#f92672">import</span> BM25Okapi
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HybridSearch</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>encoder <span style="color:#f92672">=</span> SentenceTransformer(<span style="color:#e6db74">&#39;all-mpnet-base-v2&#39;</span>)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>bm25 <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">index</span>(self, corpus):
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Tokenize for BM25</span>
+</span></span><span style="display:flex;"><span>        tokenized <span style="color:#f92672">=</span> [doc<span style="color:#f92672">.</span>split() <span style="color:#66d9ef">for</span> doc <span style="color:#f92672">in</span> corpus]
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>bm25 <span style="color:#f92672">=</span> BM25Okapi(tokenized)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Encode for semantic</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>embeddings <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>encoder<span style="color:#f92672">.</span>encode(corpus)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">search</span>(self, query, k<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># BM25 scores</span>
+</span></span><span style="display:flex;"><span>        bm25_scores <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>bm25<span style="color:#f92672">.</span>get_scores(query<span style="color:#f92672">.</span>split())
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Semantic scores</span>
+</span></span><span style="display:flex;"><span>        query_emb <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>encoder<span style="color:#f92672">.</span>encode(query)
+</span></span><span style="display:flex;"><span>        semantic_scores <span style="color:#f92672">=</span> cosine_similarity([query_emb], self<span style="color:#f92672">.</span>embeddings)[<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Combine with RRF</span>
+</span></span><span style="display:flex;"><span>        combined_scores <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>reciprocal_rank_fusion(
+</span></span><span style="display:flex;"><span>            [bm25_scores, semantic_scores]
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> np<span style="color:#f92672">.</span>argsort(combined_scores)[<span style="color:#f92672">-</span>k:][::<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]
+</span></span></code></pre></div><h3 id="3-implement-reranking">3. Implement Reranking:<a hidden class="anchor" aria-hidden="true" href="#3-implement-reranking">#</a></h3>
+<p>Always rerank your top results for accuracy, Embeddings for recall, cross-encoder for precision</p>
+<h3 id="4-monitor-anisotropy">4. Monitor Anisotropy:<a hidden class="anchor" aria-hidden="true" href="#4-monitor-anisotropy">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># If average similarity &gt; 0.6, you have a problem</span>
+</span></span><span style="display:flex;"><span>embeddings <span style="color:#f92672">=</span> model<span style="color:#f92672">.</span>encode(sample_of_your_corpus)
+</span></span><span style="display:flex;"><span>avg_sim <span style="color:#f92672">=</span> cosine_similarity(embeddings)<span style="color:#f92672">.</span>mean()
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Anisotropy check: </span><span style="color:#e6db74">{</span>avg_sim<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> avg_sim <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0.6</span>:
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;WARNING: High anisotropy detected. Consider whitening or different model&#34;</span>)
+</span></span></code></pre></div><h2 id="-the-scientifically-accurate-truth">⚖️ The Scientifically Accurate Truth<a hidden class="anchor" aria-hidden="true" href="#-the-scientifically-accurate-truth">#</a></h2>
+<ul>
+<li>Anisotropy is caused by <strong>optimization dynamics</strong>, not “common words.”</li>
+<li>CLS attention follows <strong>positional biases</strong>, not “inattention.”</li>
+<li>Length bias arises from <strong>semantic dilution</strong>, not the CLT.</li>
+<li>Subword tokenization breaks <strong>semantic composition</strong>, not “wrong embeddings.”</li>
+<li>Quantization errors are <strong>non-uniform</strong> across the embedding space.</li>
+<li>Whitening must be <strong>fit on your data</strong>, not borrowed blindly.</li>
+</ul>
+<hr>
+<h3 id="-final-insight">🧩 Final Insight<a hidden class="anchor" aria-hidden="true" href="#-final-insight">#</a></h3>
+<p>We’re compressing variable-length discrete sequences into fixed-size continuous vectors.<br>
+Information loss is inevitable.<br>
+The goal isn’t perfect semantics it’s to <strong>minimize task-relevant information loss</strong>.</p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lucven.com/tags/embeddings/">Embeddings</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://lucven.com/posts/embeddings/embedding_dimensions/">
+    <span class="title">« Prev</span>
+    <br>
+    <span>Embeddings 3072: The Dimension Lie</span>
+  </a>
+  <a class="next" href="https://lucven.com/posts/tokenization/tokenization_personality_trigger/">
+    <span class="title">Next »</span>
+    <br>
+    <span>How Spacing and Capitalization Randomly Change Your Model&#39;s Entire Personality</span>
+  </a>
+</nav>
+
+
+<ul class="share-buttons">
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on x"
+            href="https://x.com/intent/tweet/?text=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29&amp;url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f&amp;hashtags=Embeddings">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M512 62.554 L 512 449.446 C 512 483.97 483.97 512 449.446 512 L 62.554 512 C 28.03 512 0 483.97 0 449.446 L 0 62.554 C 0 28.03 28.029 0 62.554 0 L 449.446 0 C 483.971 0 512 28.03 512 62.554 Z M 269.951 190.75 L 182.567 75.216 L 56 75.216 L 207.216 272.95 L 63.9 436.783 L 125.266 436.783 L 235.9 310.383 L 332.567 436.783 L 456 436.783 L 298.367 228.367 L 432.367 75.216 L 371.033 75.216 Z M 127.633 110 L 164.101 110 L 383.481 400.065 L 349.5 400.065 Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on linkedin"
+            href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f&amp;title=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29&amp;summary=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29&amp;source=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on reddit"
+            href="https://reddit.com/submit?url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f&title=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on facebook"
+            href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on whatsapp"
+            href="https://api.whatsapp.com/send?text=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29%20-%20https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on telegram"
+            href="https://telegram.me/share/url?text=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29&amp;url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f">
+            <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share How Words Become Vectors: Embeddings Inside Transformers (Without Tears) on ycombinator"
+            href="https://news.ycombinator.com/submitlink?t=How%20Words%20Become%20Vectors%3a%20Embeddings%20Inside%20Transformers%20%28Without%20Tears%29&u=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fembeddings_intro%2f">
+            <svg version="1.1" xml:space="preserve" width="30px" height="30px" viewBox="0 0 512 512" fill="currentColor"
+                xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+                <path
+                    d="M449.446 0C483.971 0 512 28.03 512 62.554L512 449.446C512 483.97 483.97 512 449.446 512L62.554 512C28.03 512 0 483.97 0 449.446L0 62.554C0 28.03 28.029 0 62.554 0L449.446 0ZM183.8767 87.9921H121.8427L230.6673 292.4508V424.0079H281.3328V292.4508L390.1575 87.9921H328.1233L256 238.2489z" />
+            </svg>
+        </a>
+    </li>
+</ul>
+
+  </footer><script src="https://giscus.app/client.js"
+  data-repo="lakshaychhabra/lucven-comments"
+  data-repo-id="R_kgDOPYOEYw"
+  data-category="Q&A"
+  data-category-id="DIC_kwDOPYOEY84CtxWt"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="top"
+  data-theme="preferred_color_scheme"
+  data-lang="en"
+  data-loading="lazy"
+  crossorigin="anonymous"
+  async>
+</script>
+
+
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="https://lucven.com/">Lucven AI</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

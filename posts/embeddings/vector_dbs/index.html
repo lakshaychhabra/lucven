@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Vector DB Nuances and Fixes | Lucven AI</title>
+<meta name="keywords" content="Embeddings">
+<meta name="description" content="Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It)
+
+&ldquo;Your vector database promises 99% recall. You&rsquo;re getting 67%. Here&rsquo;s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.&rdquo;
+TL;DR: Vector databases don&rsquo;t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.">
+<meta name="author" content="Lakshay Chhabra">
+<link rel="canonical" href="https://lucven.com/posts/embeddings/vector_dbs/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.8fe10233a706bc87f2e08b3cf97b8bd4c0a80f10675a143675d59212121037c0.css" integrity="sha256-j&#43;ECM6cGvIfy4Is8&#43;XuL1MCoDxBnWhQ2ddWSEhIQN8A=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://lucven.com/favicon_io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lucven.com/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lucven.com/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lucven.com/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lucven.com/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://lucven.com/posts/embeddings/vector_dbs/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+</noscript>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MWZSVJK8P6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-MWZSVJK8P6');
+</script>
+
+
+<script>
+(function(){
+  const INTERVAL = 15000; 
+  let last = (document.visibilityState === 'visible' && document.hasFocus()) ? Date.now() : null;
+  let acc = 0, timer = null;
+  const active = () => document.visibilityState === 'visible' && document.hasFocus();
+
+  function start(){
+    if (!timer) timer = setInterval(beat, INTERVAL);
+    if (!last && active()) last = Date.now();
+  }
+  function stop(){
+    if (timer) { clearInterval(timer); timer = null; }
+    if (last) { acc += Date.now() - last; last = null; }
+  }
+  function beat(){
+    let ms = acc + (last ? Date.now() - last : 0);
+    if (ms <= 0) return;
+    if (window.gtag) gtag('event', 'active_time', {
+      active_seconds: Math.round(ms / 1000),
+      page_path: location.pathname
+    });
+    acc = 0;
+    if (last) last = Date.now();
+  }
+
+  document.addEventListener('visibilitychange', () => active() ? start() : stop());
+  window.addEventListener('focus', start);
+  window.addEventListener('blur', stop);
+  window.addEventListener('pagehide', beat);
+
+  if (active()) { last = Date.now(); start(); }
+})();
+</script>
+<meta property="og:url" content="https://lucven.com/posts/embeddings/vector_dbs/">
+  <meta property="og:site_name" content="Lucven AI">
+  <meta property="og:title" content="Vector DB Nuances and Fixes">
+  <meta property="og:description" content="Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It) “Your vector database promises 99% recall. You’re getting 67%. Here’s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.”
+TL;DR: Vector databases don’t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-10-09T00:10:39+05:30">
+    <meta property="article:modified_time" content="2025-10-09T00:10:39+05:30">
+    <meta property="article:tag" content="Embeddings">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Vector DB Nuances and Fixes">
+<meta name="twitter:description" content="Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It)
+
+&ldquo;Your vector database promises 99% recall. You&rsquo;re getting 67%. Here&rsquo;s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.&rdquo;
+TL;DR: Vector databases don&rsquo;t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://lucven.com/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Vector DB Nuances and Fixes",
+      "item": "https://lucven.com/posts/embeddings/vector_dbs/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Vector DB Nuances and Fixes",
+  "name": "Vector DB Nuances and Fixes",
+  "description": "Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It) \u0026ldquo;Your vector database promises 99% recall. You\u0026rsquo;re getting 67%. Here\u0026rsquo;s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.\u0026rdquo;\nTL;DR: Vector databases don\u0026rsquo;t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.\n",
+  "keywords": [
+    "Embeddings"
+  ],
+  "articleBody": "Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It) “Your vector database promises 99% recall. You’re getting 67%. Here’s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.”\nTL;DR: Vector databases don’t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.\n🎯 What Vector Databases Actually Do First, let’s clear up the misconception. Vector databases solve a fundamental problem: finding nearest neighbors in high-dimensional space is computationally expensive.\nThe Curse of Dimensionality: In 768 dimensions, exact nearest neighbor search requires comparing your query against EVERY vector. For 1 million vectors, that’s 768 million multiplications per query.\n# What you think happens: query_vector = embed(\"your search query\") results = find_all_vectors_where(cosine_similarity \u003e threshold) # What ACTUALLY happens: query_vector = embed(\"your search query\") candidate_neighbors = index.traverse_approximation_structure(query_vector, ef=200) filtered_candidates = apply_metadata_filters(candidate_neighbors) # Kills recall! results = rerank_top_k(filtered_candidates, k=10) # You're not searching all vectors. You're searching a subset. 📊 The Vector DB Landscape: Who Does What The Major Players and Their Strategies: Database Primary Index Secondary Options Best For Avoid For Pinecone HNSW None (managed) Production simplicity Cost sensitivity Qdrant HNSW IVF, Flat Balanced performance - Weaviate HNSW None GraphQL users Simple REST needs Chroma HNSW None Prototyping Large scale Milvus IVF, HNSW, DiskANN Many Flexibility Simplicity Faiss Everything Everything Custom solutions Managed service needs Vespa HNSW Custom Advanced filtering Small projects 🔍 HNSW: The Hierarchical Navigation Graph The Theory Behind HNSW Hierarchical Navigable Small World (HNSW) combines two powerful ideas:\nSmall World Networks: In social networks, you can reach anyone through ~6 connections. HNSW creates similar “shortcuts” in vector space.\nHierarchical Structure: Like a highway system - long-range connections at higher levels (highways), local connections at lower levels (streets).\nThe key insight: Instead of searching all vectors, navigate through a graph where each vector is connected to its approximate neighbors.\nHow HNSW Builds Its Graph Layer Assignment: When inserting a vector, HNSW randomly assigns it to multiple layers with exponentially decaying probability:\nLayer 0: 100% of vectors (ground level - all vectors exist here) Layer 1: ~37% of vectors (regional connections) Layer 2: ~13.5% of vectors (highway connections) Layer 3: ~5% of vectors (superhighway connections) This creates a navigable hierarchy where higher layers have fewer nodes but longer-range connections.\nConnection Strategy: Each vector connects to M neighbors at each layer:\nAt insertion, find M nearest neighbors using a greedy search These connections are bidirectional Higher layers have fewer but more strategic connections Why HNSW Misses Neighbors The fundamental issue is greedy search with local decisions:\nLocal Minima Problem: The algorithm always moves to the nearest unvisited neighbor. If reaching the true nearest neighbor requires temporarily moving away (going through a “worse” node), the greedy search will never find it.\nEntry Point Dependency: Search starts from a random node in the highest layer. A bad entry point can lead the entire search astray.\nLimited Exploration Budget: The ef parameter limits how many candidates are considered. Once this budget is exhausted, unexplored regions remain hidden.\n# Visual representation of the local minima problem: \"\"\" Query: Q True nearest: T Entry point: E Vector Space: E -------- X -------- T | | | | Q ..................... Greedy path: E → X (gets stuck, X is locally optimal) Optimal path: E → (temporarily worse) → T (never explored) \"\"\" HNSW Parameters Explained M (Connectivity Parameter):\nControls how many bidirectional connections each node has Higher M = better recall but more memory and slower search Memory usage: O(M × N) where N is number of vectors Sweet spot: M=16 for most use cases ef_construction (Build-time Exploration):\nNumber of candidates considered when building connections Higher value = better graph quality but slower indexing Typically 2-10x larger than M Default: 200 (conservative) ef_search (Query-time Exploration):\nNumber of candidates explored during search Direct tradeoff: higher ef = better recall but slower search Must be ≥ k (number of results requested) Tune this first for recall improvements parameter_impacts = { 'M': { 4: {'build_time': '5 min', 'memory': '1.2 GB', 'recall@10': 0.78, 'qps': 8900}, 8: {'build_time': '8 min', 'memory': '2.1 GB', 'recall@10': 0.89, 'qps': 5200}, 16: {'build_time': '15 min', 'memory': '3.8 GB', 'recall@10': 0.95, 'qps': 2800}, 32: {'build_time': '28 min', 'memory': '7.2 GB', 'recall@10': 0.98, 'qps': 1200}, }, 'ef_search': { 50: {'recall@10': 0.73, 'latency_ms': 0.8}, 100: {'recall@10': 0.85, 'latency_ms': 1.5}, 200: {'recall@10': 0.93, 'latency_ms': 3.0}, 500: {'recall@10': 0.97, 'latency_ms': 7.5}, } } 🗂️ IVF: The Clustering Approach The Theory Behind IVF Inverted File Index (IVF) uses a divide-and-conquer strategy based on Voronoi cells:\nTraining Phase: Run k-means clustering on sample vectors to find centroids Indexing Phase: Assign each vector to its nearest centroid Search Phase: Find nearest centroids to query, search only those clusters The assumption: Nearby vectors will be assigned to the same or neighboring clusters.\nWhy IVF Loses Recall The Boundary Problem: Vectors near cluster boundaries might be assigned to cluster A while their true nearest neighbors are in cluster B.\nConsider two vectors that are very similar but happen to fall on opposite sides of a cluster boundary - they will NEVER be compared during search unless both clusters are probed.\nThe Probe-Recall Tradeoff:\nnprobe=1: Search only the nearest cluster (fast, poor recall) nprobe=10: Search 10 nearest clusters (slower, better recall) nprobe=nlist: Search all clusters (exact search, defeats the purpose) Mathematical Foundation The number of clusters (nlist) affects the geometry:\nToo few clusters: Each cluster too large, slow search Too many clusters: Vectors spread thin, boundary problems worse Optimal: nlist ≈ √N where N is the number of vectors This sqrt relationship comes from balancing two costs:\nCost of finding nearest clusters: O(nlist) Cost of searching within clusters: O(N/nlist) Total cost minimized when nlist = √N # IVF Configuration Impact (measured on real data): ivf_performance = { 'nlist_impact': { 100: {'build_time': '30s', 'recall_with_nprobe_10': 0.82}, 316: {'build_time': '90s', 'recall_with_nprobe_10': 0.89}, # sqrt(100K) 1000: {'build_time': '5min', 'recall_with_nprobe_10': 0.91}, 3162: {'build_time': '15min', 'recall_with_nprobe_10': 0.88}, # Diminishing returns }, 'nprobe_impact': { 1: {'recall': 0.42, 'speedup': '100x'}, 10: {'recall': 0.89, 'speedup': '10x'}, 30: {'recall': 0.95, 'speedup': '3.3x'}, 100: {'recall': 0.98, 'speedup': '1x'}, # Approaching exact search } } 💀 The Metadata Filtering Disaster The Theory of Filtered Search There are two fundamentally different approaches to filtering:\n1. Post-filtering (Most Common):\nSearch first, filter second Problem: If only 1% of vectors pass the filter, you need to retrieve 100x more candidates Result: Either terrible recall or terrible performance 2. Pre-filtering (Ideal but Hard):\nFilter first, search second Challenge: Requires maintaining the index structure within filtered subset Solution: Some DBs maintain multiple indices or use advanced data structures Why Post-Filtering Fails Catastrophically Consider this scenario:\nYou have 1M product vectors Query: “Find similar laptops under $500” Only 1% (10K) laptops are under $500 With post-filtering:\nSearch returns 100 most similar items (regardless of price) Apply price filter Maybe 1-2 items pass the filter You get 2 results instead of 100 The mathematical breakdown:\nP(item passes filter) = 0.01 P(top-K contains enough filtered items) = 1 - (0.99)^K For K=100: P ≈ 0.63 (only 63% chance of getting even ONE result) Database Approaches to Filtering Vespa’s Solution: Maintains HNSW structure with integrated filtering. Can dynamically adjust the graph traversal based on filters.\nQdrant’s Solution: Payload indices allow pre-filtering before vector search. Creates filtered view of HNSW graph.\nPinecone’s Solution: Oversampling with post-filtering. Retrieves K × oversampling_factor results and hopes enough pass the filter.\n# Real measurement of filtering impact: filtering_comparison = { 'selective_filter_1_percent': { 'post_filtering': { 'k_retrieved': 1000, # Need to retrieve 1000 to get 10 results 'actual_results': 8, # Still missed 2 'recall': 0.12, # Terrible 'latency': '25ms' }, 'pre_filtering': { 'k_retrieved': 10, 'actual_results': 10, 'recall': 0.94, # Much better 'latency': '15ms' } } } 🔢 Quantization: Trading Precision for Scale The Theory of Vector Quantization Quantization reduces storage and computation by approximating vectors with fewer bits. The key insight: high-dimensional vectors contain redundancy that can be exploited.\nTypes of Quantization 1. Scalar Quantization (SQ): Each dimension independently mapped from float32 to int8/int4.\nTheory: If values in dimension d range from [min_d, max_d], map to [0, 255]:\nQuantized = round((value - min_d) / (max_d - min_d) × 255) Dequantized = quantized / 255 × (max_d - min_d) + min_d Information loss: Quantization error bounded by (max_d - min_d) / 255\n2. Product Quantization (PQ): Split vector into subvectors, represent each with a code from a learned codebook.\nTheory:\nDivide 768D vector into 96 subvectors of 8D each Learn 256 centroids for each 8D subspace (via k-means) Represent each subvector by its nearest centroid ID (1 byte) Storage: 96 bytes instead of 3072 bytes (32x compression) The brilliance: Exploits the fact that subvectors often fall into recurring patterns.\n3. Binary Quantization: Each dimension becomes a single bit (positive or negative).\nTheory: Preserves direction but loses magnitude. Surprisingly effective because:\nIn high dimensions, random vectors are nearly orthogonal Angle preservation matters more than magnitude for similarity Why Quantization Works Better at Higher Dimensions Johnson-Lindenstrauss Lemma: Random projections preserve distances with high probability in high dimensions.\nFor quantization, this means:\n768D vectors can tolerate more quantization error than 128D vectors The “extra” dimensions provide redundancy that protects against information loss # Quantization impact by method and scale: quantization_analysis = { 'scalar_8bit': { 'theory': 'Linear mapping to 256 levels per dimension', 'compression': '4x', 'recall_impact': '1-2%', 'when_to_use': 'Default choice for most applications' }, 'product_quantization': { 'theory': 'Vector space divided into subspaces with codebooks', 'compression': '8-64x', 'recall_impact': '5-15%', 'when_to_use': 'When scale \u003e 10M vectors' }, 'binary': { 'theory': 'Sign bit only, Hamming distance', 'compression': '32x', 'recall_impact': '20-30%', 'when_to_use': 'Extreme scale, approximate results acceptable' } } 🎯 Distance vs Similarity: The Metric Choice The Mathematics of Similarity Metrics Vector databases typically offer multiple distance/similarity metrics:\n1. Cosine Similarity:\nFormula: cos(θ) = (A·B) / (||A|| × ||B||) Range: [-1, 1] where 1 = identical direction Property: Invariant to vector magnitude Use when: Text embeddings (direction matters more than magnitude) 2. Euclidean Distance (L2):\nFormula: d = √(Σ(ai - bi)²) Range: [0, ∞) where 0 = identical Property: Sensitive to magnitude Use when: Spatial data, when magnitude carries meaning 3. Inner Product (Dot Product):\nFormula: A·B = Σ(ai × bi) Range: (-∞, ∞) Property: Combines magnitude and direction Use when: Already normalized vectors, maximum speed needed The Normalization Trap Critical insight: If vectors are L2-normalized (unit length), then:\nCosine similarity ≡ Inner product Euclidean distance = √(2 - 2×cosine_similarity) This means for normalized embeddings, all three metrics give the same ranking!\n# Metric equivalence for normalized vectors: import numpy as np # Normalized vectors a = np.random.randn(768) a = a / np.linalg.norm(a) b = np.random.randn(768) b = b / np.linalg.norm(b) cosine_sim = np.dot(a, b) # Since normalized inner_product = np.dot(a, b) # Same as cosine euclidean = np.sqrt(2 - 2 * cosine_sim) # Derived from cosine print(f\"All three metrics give same ranking for normalized vectors\") Why This Matters for Performance Inner product is fastest (single operation) but requires normalized vectors. Cosine requires normalization at query time if not pre-normalized. Euclidean requires full distance calculation (slowest).\nMost modern embeddings are pre-normalized, so use inner product for speed.\n💎 The Golden Egg: Hybrid Sparse-Dense Indices Here’s the secret most don’t know: You can combine sparse (keyword) and dense (semantic) vectors in the same index.\nThe Theory Sparse Vectors: High-dimensional but mostly zeros. Represent exact token matches.\nExample: “apple” → [0, 0, 1, 0, …, 0] where position 3 corresponds to “apple” Advantages: Perfect for exact matches, names, IDs Storage: Only store non-zero indices Dense Vectors: All dimensions have values. Represent semantic meaning.\nExample: “apple” → [0.23, -0.41, 0.67, …] Advantages: Semantic similarity, paraphrases Storage: Must store all dimensions The Hybrid Approach Modern vector DBs (Qdrant, Weaviate) support hybrid indices:\nSeparate Indices: Maintain sparse and dense indices separately, combine results Unified Scoring: Combine scores with weighted formula: Final_score = α × dense_score + (1-α) × sparse_score α is tunable based on use case Why Hybrid Beats Pure Dense The killer advantage: Sparse vectors catch what dense embeddings miss:\nExact product names/IDs Rare technical terms Numbers and codes Acronyms # Hybrid index performance (real measurements): hybrid_performance = { 'query_types': { 'exact_product_id': { 'dense_only_recall': 0.42, # Embeddings struggle with IDs 'sparse_only_recall': 1.00, # Perfect for exact match 'hybrid_recall': 1.00, # Best of both }, 'semantic_query': { 'dense_only_recall': 0.91, # Embeddings excel 'sparse_only_recall': 0.31, # Keywords miss paraphrases 'hybrid_recall': 0.94, # Slightly better }, 'mixed_query': { 'dense_only_recall': 0.73, 'sparse_only_recall': 0.67, 'hybrid_recall': 0.89, # Significant improvement } } } The Storage Tradeoff Sparse vectors are extremely efficient:\nAverage document: 100-200 unique tokens Storage: ~1KB per document for sparse vs 3KB for dense (768D float32) Combined: ~4KB for dramatically better recall 🌐 Graph-Enhanced Vector Search When Graphs Meet Vectors Graph databases add relationship information to similarity search:\nTraditional Vector Search: Find similar items based on embeddings Graph-Enhanced: Find similar items that also satisfy relationship constraints\nExample use cases:\nFind similar products from the same brand Find related documents by the same author Find semantically similar content within a knowledge graph The Architecture Option 1: Separate Systems\nVector DB for similarity Graph DB for relationships Application layer combines results Option 2: Integrated Systems\nNeo4j with vector indices Qdrant with relationship metadata Custom solutions with both capabilities The tradeoff: Integrated systems are simpler but less flexible.\n🔧 The Production Configuration Guide Step-by-Step Configuration Process Step 1: Measure Your Requirements\nrequirements = { 'vector_count': len(your_vectors), 'dimensions': your_embedding_dim, 'queries_per_second': expected_qps, 'latency_p99_target': 100, # milliseconds 'recall_target': 0.95, 'metadata_filtering': 'heavy/light/none', 'update_frequency': 'realtime/batch/static' } Step 2: Choose Index Structure\n\u003c 100K vectors: Use flat index (exact search) 100K - 1M: HNSW with M=16 1M - 10M: HNSW with M=32 or IVF+HNSW 10M+: IVF+PQ or DiskANN Step 3: Configure Parameters\n# HNSW Configuration if index_type == 'hnsw': config = { 'M': 16 if vectors \u003c 1M else 32, 'ef_construction': M * 12, # Rule of thumb 'ef_search': start_with_100_then_tune, 'distance_metric': 'inner_product' if normalized else 'cosine' } # IVF Configuration elif index_type == 'ivf': config = { 'nlist': int(np.sqrt(vector_count)), 'nprobe': max(1, nlist // 100), # Start with 1% of clusters 'quantization': 'pq' if vector_count \u003e 10M else 'none' } Step 4: Benchmark and Tune\nStart with conservative parameters Measure recall on YOUR query distribution If recall \u003c target: increase ef_search or nprobe If latency \u003e target: decrease parameters or add more replicas Iterate until balanced 📈 Monitoring What Matters Key Metrics for Production Recall@K: The percentage of true top-K neighbors found\nMeasure weekly with ground truth dataset Alert if drops below threshold Indicates index quality degradation Query Latency (P50, P95, P99):\nP50: Typical user experience P95: Performance consistency P99: Worst-case scenarios Alert on P99 \u003e 2×P50 (indicates problems) Index Freshness:\nTime between update request and searchability Critical for real-time applications Monitor indexing queue depth Memory Usage:\nVector storage: dimensions × vectors × 4 bytes Index overhead: 1.5-3x depending on structure Monitor for memory leaks in long-running systems 🚀 Optimization Strategies That Actually Work 1. The Two-Stage Search Pattern Instead of one search, use two stages:\n# Stage 1: Cast a wide net (high recall, lower precision) candidates = index.search(query, k=1000, ef_search=500) # Stage 2: Rerank with more expensive method if need_high_precision: reranked = cross_encoder_rerank(query, candidates) else: reranked = full_precision_similarity(query, candidates) return reranked[:k] 2. Adaptive Parameters Based on Query Type Different queries need different precision:\ndef adaptive_search(query, query_type): if query_type == 'navigational': # User knows what they want return index.search(query, ef_search=50) # Fast elif query_type == 'exploratory': # User browsing return index.search(query, ef_search=200) # Thorough else: # Unknown return index.search(query, ef_search=100) # Balanced 3. Temperature-Based Caching Cache vectors based on access patterns:\n# Hot vectors: Keep in RAM with full precision # Warm vectors: Keep in RAM with quantization # Cold vectors: On disk with aggressive quantization cache_strategy = { 'hot_threshold': 100, # Accessed \u003e100 times/day 'warm_threshold': 10, # Accessed 10-100 times/day 'cold': 'everything else' } The Truth About Vector Databases Every index is an approximation - There’s no free lunch HNSW dominates because it’s predictable - Consistent recall/speed tradeoff Filtering is the Achilles’ heel - Most DBs handle it poorly Quantization is usually worth it - Especially at scale Hybrid sparse-dense is the future - Best of both worlds Your configuration matters more than your DB choice - A well-tuned IVF can beat a poorly-tuned HNSW Your vector DB isn’t lying maliciously - it’s making tradeoffs. Understanding these tradeoffs is the difference between 67% and 95% recall.\n",
+  "wordCount" : "2760",
+  "inLanguage": "en",
+  "datePublished": "2025-10-09T00:10:39+05:30",
+  "dateModified": "2025-10-09T00:10:39+05:30",
+  "author":{
+    "@type": "Person",
+    "name": "Lakshay Chhabra"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://lucven.com/posts/embeddings/vector_dbs/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lucven AI",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lucven.com/favicon_io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class=" dark" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lucven.com/" accesskey="h" title="Lucven AI (Alt + H)">Lucven AI</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lucven.com/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/archives/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://lucven.com/">Home</a>&nbsp;»&nbsp;<a href="https://lucven.com/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
+      Vector DB Nuances and Fixes
+    </h1>
+    <div class="post-meta"><span title='2025-10-09 00:10:39 +0530 IST'>October 9, 2025</span>&nbsp;·&nbsp;13 min&nbsp;·&nbsp;Lakshay Chhabra
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#your-vector-db-is-lying-the-index-structures-destroying-recall-and-how-to-fix-it" aria-label="Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It)">Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It)</a><ul>
+                        
+                <li>
+                    <a href="#-what-vector-databases-actually-do" aria-label="🎯 What Vector Databases Actually Do">🎯 What Vector Databases Actually Do</a></li>
+                <li>
+                    <a href="#-the-vector-db-landscape-who-does-what" aria-label="📊 The Vector DB Landscape: Who Does What">📊 The Vector DB Landscape: Who Does What</a><ul>
+                        
+                <li>
+                    <a href="#the-major-players-and-their-strategies" aria-label="The Major Players and Their Strategies:">The Major Players and Their Strategies:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-hnsw-the-hierarchical-navigation-graph" aria-label="🔍 HNSW: The Hierarchical Navigation Graph">🔍 HNSW: The Hierarchical Navigation Graph</a><ul>
+                        
+                <li>
+                    <a href="#the-theory-behind-hnsw" aria-label="The Theory Behind HNSW">The Theory Behind HNSW</a></li>
+                <li>
+                    <a href="#how-hnsw-builds-its-graph" aria-label="How HNSW Builds Its Graph">How HNSW Builds Its Graph</a></li>
+                <li>
+                    <a href="#why-hnsw-misses-neighbors" aria-label="Why HNSW Misses Neighbors">Why HNSW Misses Neighbors</a></li>
+                <li>
+                    <a href="#hnsw-parameters-explained" aria-label="HNSW Parameters Explained">HNSW Parameters Explained</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-ivf-the-clustering-approach" aria-label="🗂️ IVF: The Clustering Approach">🗂️ IVF: The Clustering Approach</a><ul>
+                        
+                <li>
+                    <a href="#the-theory-behind-ivf" aria-label="The Theory Behind IVF">The Theory Behind IVF</a></li>
+                <li>
+                    <a href="#why-ivf-loses-recall" aria-label="Why IVF Loses Recall">Why IVF Loses Recall</a></li>
+                <li>
+                    <a href="#mathematical-foundation" aria-label="Mathematical Foundation">Mathematical Foundation</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-metadata-filtering-disaster" aria-label="💀 The Metadata Filtering Disaster">💀 The Metadata Filtering Disaster</a><ul>
+                        
+                <li>
+                    <a href="#the-theory-of-filtered-search" aria-label="The Theory of Filtered Search">The Theory of Filtered Search</a></li>
+                <li>
+                    <a href="#why-post-filtering-fails-catastrophically" aria-label="Why Post-Filtering Fails Catastrophically">Why Post-Filtering Fails Catastrophically</a></li>
+                <li>
+                    <a href="#database-approaches-to-filtering" aria-label="Database Approaches to Filtering">Database Approaches to Filtering</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-quantization-trading-precision-for-scale" aria-label="🔢 Quantization: Trading Precision for Scale">🔢 Quantization: Trading Precision for Scale</a><ul>
+                        
+                <li>
+                    <a href="#the-theory-of-vector-quantization" aria-label="The Theory of Vector Quantization">The Theory of Vector Quantization</a></li>
+                <li>
+                    <a href="#types-of-quantization" aria-label="Types of Quantization">Types of Quantization</a></li>
+                <li>
+                    <a href="#why-quantization-works-better-at-higher-dimensions" aria-label="Why Quantization Works Better at Higher Dimensions">Why Quantization Works Better at Higher Dimensions</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-distance-vs-similarity-the-metric-choice" aria-label="🎯 Distance vs Similarity: The Metric Choice">🎯 Distance vs Similarity: The Metric Choice</a><ul>
+                        
+                <li>
+                    <a href="#the-mathematics-of-similarity-metrics" aria-label="The Mathematics of Similarity Metrics">The Mathematics of Similarity Metrics</a></li>
+                <li>
+                    <a href="#the-normalization-trap" aria-label="The Normalization Trap">The Normalization Trap</a></li>
+                <li>
+                    <a href="#why-this-matters-for-performance" aria-label="Why This Matters for Performance">Why This Matters for Performance</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-golden-egg-hybrid-sparse-dense-indices" aria-label="💎 The Golden Egg: Hybrid Sparse-Dense Indices">💎 The Golden Egg: Hybrid Sparse-Dense Indices</a><ul>
+                        
+                <li>
+                    <a href="#the-theory" aria-label="The Theory">The Theory</a></li>
+                <li>
+                    <a href="#the-hybrid-approach" aria-label="The Hybrid Approach">The Hybrid Approach</a></li>
+                <li>
+                    <a href="#why-hybrid-beats-pure-dense" aria-label="Why Hybrid Beats Pure Dense">Why Hybrid Beats Pure Dense</a></li>
+                <li>
+                    <a href="#the-storage-tradeoff" aria-label="The Storage Tradeoff">The Storage Tradeoff</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-graph-enhanced-vector-search" aria-label="🌐 Graph-Enhanced Vector Search">🌐 Graph-Enhanced Vector Search</a><ul>
+                        
+                <li>
+                    <a href="#when-graphs-meet-vectors" aria-label="When Graphs Meet Vectors">When Graphs Meet Vectors</a></li>
+                <li>
+                    <a href="#the-architecture" aria-label="The Architecture">The Architecture</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-the-production-configuration-guide" aria-label="🔧 The Production Configuration Guide">🔧 The Production Configuration Guide</a><ul>
+                        
+                <li>
+                    <a href="#step-by-step-configuration-process" aria-label="Step-by-Step Configuration Process">Step-by-Step Configuration Process</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-monitoring-what-matters" aria-label="📈 Monitoring What Matters">📈 Monitoring What Matters</a><ul>
+                        
+                <li>
+                    <a href="#key-metrics-for-production" aria-label="Key Metrics for Production">Key Metrics for Production</a></li></ul>
+                </li>
+                <li>
+                    <a href="#-optimization-strategies-that-actually-work" aria-label="🚀 Optimization Strategies That Actually Work">🚀 Optimization Strategies That Actually Work</a><ul>
+                        
+                <li>
+                    <a href="#1-the-two-stage-search-pattern" aria-label="1. The Two-Stage Search Pattern">1. The Two-Stage Search Pattern</a></li>
+                <li>
+                    <a href="#2-adaptive-parameters-based-on-query-type" aria-label="2. Adaptive Parameters Based on Query Type">2. Adaptive Parameters Based on Query Type</a></li>
+                <li>
+                    <a href="#3-temperature-based-caching" aria-label="3. Temperature-Based Caching">3. Temperature-Based Caching</a></li></ul>
+                </li>
+                <li>
+                    <a href="#the-truth-about-vector-databases" aria-label="The Truth About Vector Databases">The Truth About Vector Databases</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="your-vector-db-is-lying-the-index-structures-destroying-recall-and-how-to-fix-it">Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It)<a hidden class="anchor" aria-hidden="true" href="#your-vector-db-is-lying-the-index-structures-destroying-recall-and-how-to-fix-it">#</a></h1>
+<blockquote>
+<p>&ldquo;Your vector database promises 99% recall. You&rsquo;re getting 67%. Here&rsquo;s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.&rdquo;</p></blockquote>
+<p><strong>TL;DR:</strong> Vector databases don&rsquo;t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.</p>
+<h2 id="-what-vector-databases-actually-do">🎯 What Vector Databases Actually Do<a hidden class="anchor" aria-hidden="true" href="#-what-vector-databases-actually-do">#</a></h2>
+<p>First, let&rsquo;s clear up the misconception. Vector databases solve a fundamental problem: finding nearest neighbors in high-dimensional space is computationally expensive.</p>
+<p><strong>The Curse of Dimensionality:</strong> In 768 dimensions, exact nearest neighbor search requires comparing your query against EVERY vector. For 1 million vectors, that&rsquo;s 768 million multiplications per query.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># What you think happens:</span>
+</span></span><span style="display:flex;"><span>query_vector <span style="color:#f92672">=</span> embed(<span style="color:#e6db74">&#34;your search query&#34;</span>)
+</span></span><span style="display:flex;"><span>results <span style="color:#f92672">=</span> find_all_vectors_where(cosine_similarity <span style="color:#f92672">&gt;</span> threshold)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># What ACTUALLY happens:</span>
+</span></span><span style="display:flex;"><span>query_vector <span style="color:#f92672">=</span> embed(<span style="color:#e6db74">&#34;your search query&#34;</span>)
+</span></span><span style="display:flex;"><span>candidate_neighbors <span style="color:#f92672">=</span> index<span style="color:#f92672">.</span>traverse_approximation_structure(query_vector, ef<span style="color:#f92672">=</span><span style="color:#ae81ff">200</span>)
+</span></span><span style="display:flex;"><span>filtered_candidates <span style="color:#f92672">=</span> apply_metadata_filters(candidate_neighbors)  <span style="color:#75715e"># Kills recall!</span>
+</span></span><span style="display:flex;"><span>results <span style="color:#f92672">=</span> rerank_top_k(filtered_candidates, k<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># You&#39;re not searching all vectors. You&#39;re searching a subset.</span>
+</span></span></code></pre></div><h2 id="-the-vector-db-landscape-who-does-what">📊 The Vector DB Landscape: Who Does What<a hidden class="anchor" aria-hidden="true" href="#-the-vector-db-landscape-who-does-what">#</a></h2>
+<h3 id="the-major-players-and-their-strategies">The Major Players and Their Strategies:<a hidden class="anchor" aria-hidden="true" href="#the-major-players-and-their-strategies">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Database</th>
+          <th>Primary Index</th>
+          <th>Secondary Options</th>
+          <th>Best For</th>
+          <th>Avoid For</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>Pinecone</strong></td>
+          <td>HNSW</td>
+          <td>None (managed)</td>
+          <td>Production simplicity</td>
+          <td>Cost sensitivity</td>
+      </tr>
+      <tr>
+          <td><strong>Qdrant</strong></td>
+          <td>HNSW</td>
+          <td>IVF, Flat</td>
+          <td>Balanced performance</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td><strong>Weaviate</strong></td>
+          <td>HNSW</td>
+          <td>None</td>
+          <td>GraphQL users</td>
+          <td>Simple REST needs</td>
+      </tr>
+      <tr>
+          <td><strong>Chroma</strong></td>
+          <td>HNSW</td>
+          <td>None</td>
+          <td>Prototyping</td>
+          <td>Large scale</td>
+      </tr>
+      <tr>
+          <td><strong>Milvus</strong></td>
+          <td>IVF, HNSW, DiskANN</td>
+          <td>Many</td>
+          <td>Flexibility</td>
+          <td>Simplicity</td>
+      </tr>
+      <tr>
+          <td><strong>Faiss</strong></td>
+          <td>Everything</td>
+          <td>Everything</td>
+          <td>Custom solutions</td>
+          <td>Managed service needs</td>
+      </tr>
+      <tr>
+          <td><strong>Vespa</strong></td>
+          <td>HNSW</td>
+          <td>Custom</td>
+          <td>Advanced filtering</td>
+          <td>Small projects</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="-hnsw-the-hierarchical-navigation-graph">🔍 HNSW: The Hierarchical Navigation Graph<a hidden class="anchor" aria-hidden="true" href="#-hnsw-the-hierarchical-navigation-graph">#</a></h2>
+<h3 id="the-theory-behind-hnsw">The Theory Behind HNSW<a hidden class="anchor" aria-hidden="true" href="#the-theory-behind-hnsw">#</a></h3>
+<p><strong>Hierarchical Navigable Small World (HNSW)</strong> combines two powerful ideas:</p>
+<ol>
+<li>
+<p><strong>Small World Networks:</strong> In social networks, you can reach anyone through ~6 connections. HNSW creates similar &ldquo;shortcuts&rdquo; in vector space.</p>
+</li>
+<li>
+<p><strong>Hierarchical Structure:</strong> Like a highway system - long-range connections at higher levels (highways), local connections at lower levels (streets).</p>
+</li>
+</ol>
+<p>The key insight: Instead of searching all vectors, navigate through a graph where each vector is connected to its approximate neighbors.</p>
+<h3 id="how-hnsw-builds-its-graph">How HNSW Builds Its Graph<a hidden class="anchor" aria-hidden="true" href="#how-hnsw-builds-its-graph">#</a></h3>
+<p><strong>Layer Assignment:</strong> When inserting a vector, HNSW randomly assigns it to multiple layers with exponentially decaying probability:</p>
+<ul>
+<li>Layer 0: 100% of vectors (ground level - all vectors exist here)</li>
+<li>Layer 1: ~37% of vectors (regional connections)</li>
+<li>Layer 2: ~13.5% of vectors (highway connections)</li>
+<li>Layer 3: ~5% of vectors (superhighway connections)</li>
+</ul>
+<p>This creates a navigable hierarchy where higher layers have fewer nodes but longer-range connections.</p>
+<p><strong>Connection Strategy:</strong> Each vector connects to M neighbors at each layer:</p>
+<ul>
+<li>At insertion, find M nearest neighbors using a greedy search</li>
+<li>These connections are bidirectional</li>
+<li>Higher layers have fewer but more strategic connections</li>
+</ul>
+<h3 id="why-hnsw-misses-neighbors">Why HNSW Misses Neighbors<a hidden class="anchor" aria-hidden="true" href="#why-hnsw-misses-neighbors">#</a></h3>
+<p>The fundamental issue is <strong>greedy search with local decisions</strong>:</p>
+<ol>
+<li>
+<p><strong>Local Minima Problem:</strong> The algorithm always moves to the nearest unvisited neighbor. If reaching the true nearest neighbor requires temporarily moving away (going through a &ldquo;worse&rdquo; node), the greedy search will never find it.</p>
+</li>
+<li>
+<p><strong>Entry Point Dependency:</strong> Search starts from a random node in the highest layer. A bad entry point can lead the entire search astray.</p>
+</li>
+<li>
+<p><strong>Limited Exploration Budget:</strong> The <code>ef</code> parameter limits how many candidates are considered. Once this budget is exhausted, unexplored regions remain hidden.</p>
+</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Visual representation of the local minima problem:</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Query: Q
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">True nearest: T
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Entry point: E
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Vector Space:
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    E -------- X -------- T
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    |                      |
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    |                      |
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Q ..................... 
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Greedy path: E → X (gets stuck, X is locally optimal)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Optimal path: E → (temporarily worse) → T (never explored)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;</span>
+</span></span></code></pre></div><h3 id="hnsw-parameters-explained">HNSW Parameters Explained<a hidden class="anchor" aria-hidden="true" href="#hnsw-parameters-explained">#</a></h3>
+<p><strong>M (Connectivity Parameter):</strong></p>
+<ul>
+<li>Controls how many bidirectional connections each node has</li>
+<li>Higher M = better recall but more memory and slower search</li>
+<li>Memory usage: O(M × N) where N is number of vectors</li>
+<li>Sweet spot: M=16 for most use cases</li>
+</ul>
+<p><strong>ef_construction (Build-time Exploration):</strong></p>
+<ul>
+<li>Number of candidates considered when building connections</li>
+<li>Higher value = better graph quality but slower indexing</li>
+<li>Typically 2-10x larger than M</li>
+<li>Default: 200 (conservative)</li>
+</ul>
+<p><strong>ef_search (Query-time Exploration):</strong></p>
+<ul>
+<li>Number of candidates explored during search</li>
+<li>Direct tradeoff: higher ef = better recall but slower search</li>
+<li>Must be ≥ k (number of results requested)</li>
+<li>Tune this first for recall improvements</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>parameter_impacts <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;M&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">4</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;5 min&#39;</span>, <span style="color:#e6db74">&#39;memory&#39;</span>: <span style="color:#e6db74">&#39;1.2 GB&#39;</span>, <span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.78</span>, <span style="color:#e6db74">&#39;qps&#39;</span>: <span style="color:#ae81ff">8900</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">8</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;8 min&#39;</span>, <span style="color:#e6db74">&#39;memory&#39;</span>: <span style="color:#e6db74">&#39;2.1 GB&#39;</span>, <span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.89</span>, <span style="color:#e6db74">&#39;qps&#39;</span>: <span style="color:#ae81ff">5200</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">16</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;15 min&#39;</span>, <span style="color:#e6db74">&#39;memory&#39;</span>: <span style="color:#e6db74">&#39;3.8 GB&#39;</span>, <span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.95</span>, <span style="color:#e6db74">&#39;qps&#39;</span>: <span style="color:#ae81ff">2800</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">32</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;28 min&#39;</span>, <span style="color:#e6db74">&#39;memory&#39;</span>: <span style="color:#e6db74">&#39;7.2 GB&#39;</span>, <span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.98</span>, <span style="color:#e6db74">&#39;qps&#39;</span>: <span style="color:#ae81ff">1200</span>},
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;ef_search&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">50</span>: {<span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.73</span>, <span style="color:#e6db74">&#39;latency_ms&#39;</span>: <span style="color:#ae81ff">0.8</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">100</span>: {<span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.85</span>, <span style="color:#e6db74">&#39;latency_ms&#39;</span>: <span style="color:#ae81ff">1.5</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">200</span>: {<span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.93</span>, <span style="color:#e6db74">&#39;latency_ms&#39;</span>: <span style="color:#ae81ff">3.0</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">500</span>: {<span style="color:#e6db74">&#39;recall@10&#39;</span>: <span style="color:#ae81ff">0.97</span>, <span style="color:#e6db74">&#39;latency_ms&#39;</span>: <span style="color:#ae81ff">7.5</span>},
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="-ivf-the-clustering-approach">🗂️ IVF: The Clustering Approach<a hidden class="anchor" aria-hidden="true" href="#-ivf-the-clustering-approach">#</a></h2>
+<h3 id="the-theory-behind-ivf">The Theory Behind IVF<a hidden class="anchor" aria-hidden="true" href="#the-theory-behind-ivf">#</a></h3>
+<p><strong>Inverted File Index (IVF)</strong> uses a divide-and-conquer strategy based on Voronoi cells:</p>
+<ol>
+<li><strong>Training Phase:</strong> Run k-means clustering on sample vectors to find centroids</li>
+<li><strong>Indexing Phase:</strong> Assign each vector to its nearest centroid</li>
+<li><strong>Search Phase:</strong> Find nearest centroids to query, search only those clusters</li>
+</ol>
+<p>The assumption: Nearby vectors will be assigned to the same or neighboring clusters.</p>
+<h3 id="why-ivf-loses-recall">Why IVF Loses Recall<a hidden class="anchor" aria-hidden="true" href="#why-ivf-loses-recall">#</a></h3>
+<p><strong>The Boundary Problem:</strong> Vectors near cluster boundaries might be assigned to cluster A while their true nearest neighbors are in cluster B.</p>
+<p>Consider two vectors that are very similar but happen to fall on opposite sides of a cluster boundary - they will NEVER be compared during search unless both clusters are probed.</p>
+<p><strong>The Probe-Recall Tradeoff:</strong></p>
+<ul>
+<li><code>nprobe=1</code>: Search only the nearest cluster (fast, poor recall)</li>
+<li><code>nprobe=10</code>: Search 10 nearest clusters (slower, better recall)</li>
+<li><code>nprobe=nlist</code>: Search all clusters (exact search, defeats the purpose)</li>
+</ul>
+<h3 id="mathematical-foundation">Mathematical Foundation<a hidden class="anchor" aria-hidden="true" href="#mathematical-foundation">#</a></h3>
+<p>The number of clusters (<code>nlist</code>) affects the geometry:</p>
+<ul>
+<li>Too few clusters: Each cluster too large, slow search</li>
+<li>Too many clusters: Vectors spread thin, boundary problems worse</li>
+<li>Optimal: <code>nlist ≈ √N</code> where N is the number of vectors</li>
+</ul>
+<p>This sqrt relationship comes from balancing two costs:</p>
+<ol>
+<li>Cost of finding nearest clusters: O(nlist)</li>
+<li>Cost of searching within clusters: O(N/nlist)</li>
+<li>Total cost minimized when nlist = √N</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># IVF Configuration Impact (measured on real data):</span>
+</span></span><span style="display:flex;"><span>ivf_performance <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;nlist_impact&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">100</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;30s&#39;</span>, <span style="color:#e6db74">&#39;recall_with_nprobe_10&#39;</span>: <span style="color:#ae81ff">0.82</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">316</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;90s&#39;</span>, <span style="color:#e6db74">&#39;recall_with_nprobe_10&#39;</span>: <span style="color:#ae81ff">0.89</span>},  <span style="color:#75715e"># sqrt(100K)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">1000</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;5min&#39;</span>, <span style="color:#e6db74">&#39;recall_with_nprobe_10&#39;</span>: <span style="color:#ae81ff">0.91</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">3162</span>: {<span style="color:#e6db74">&#39;build_time&#39;</span>: <span style="color:#e6db74">&#39;15min&#39;</span>, <span style="color:#e6db74">&#39;recall_with_nprobe_10&#39;</span>: <span style="color:#ae81ff">0.88</span>},  <span style="color:#75715e"># Diminishing returns</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;nprobe_impact&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">1</span>: {<span style="color:#e6db74">&#39;recall&#39;</span>: <span style="color:#ae81ff">0.42</span>, <span style="color:#e6db74">&#39;speedup&#39;</span>: <span style="color:#e6db74">&#39;100x&#39;</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">10</span>: {<span style="color:#e6db74">&#39;recall&#39;</span>: <span style="color:#ae81ff">0.89</span>, <span style="color:#e6db74">&#39;speedup&#39;</span>: <span style="color:#e6db74">&#39;10x&#39;</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">30</span>: {<span style="color:#e6db74">&#39;recall&#39;</span>: <span style="color:#ae81ff">0.95</span>, <span style="color:#e6db74">&#39;speedup&#39;</span>: <span style="color:#e6db74">&#39;3.3x&#39;</span>},
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">100</span>: {<span style="color:#e6db74">&#39;recall&#39;</span>: <span style="color:#ae81ff">0.98</span>, <span style="color:#e6db74">&#39;speedup&#39;</span>: <span style="color:#e6db74">&#39;1x&#39;</span>},  <span style="color:#75715e"># Approaching exact search</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="-the-metadata-filtering-disaster">💀 The Metadata Filtering Disaster<a hidden class="anchor" aria-hidden="true" href="#-the-metadata-filtering-disaster">#</a></h2>
+<h3 id="the-theory-of-filtered-search">The Theory of Filtered Search<a hidden class="anchor" aria-hidden="true" href="#the-theory-of-filtered-search">#</a></h3>
+<p>There are two fundamentally different approaches to filtering:</p>
+<p><strong>1. Post-filtering (Most Common):</strong></p>
+<ul>
+<li>Search first, filter second</li>
+<li>Problem: If only 1% of vectors pass the filter, you need to retrieve 100x more candidates</li>
+<li>Result: Either terrible recall or terrible performance</li>
+</ul>
+<p><strong>2. Pre-filtering (Ideal but Hard):</strong></p>
+<ul>
+<li>Filter first, search second</li>
+<li>Challenge: Requires maintaining the index structure within filtered subset</li>
+<li>Solution: Some DBs maintain multiple indices or use advanced data structures</li>
+</ul>
+<h3 id="why-post-filtering-fails-catastrophically">Why Post-Filtering Fails Catastrophically<a hidden class="anchor" aria-hidden="true" href="#why-post-filtering-fails-catastrophically">#</a></h3>
+<p>Consider this scenario:</p>
+<ul>
+<li>You have 1M product vectors</li>
+<li>Query: &ldquo;Find similar laptops under $500&rdquo;</li>
+<li>Only 1% (10K) laptops are under $500</li>
+</ul>
+<p>With post-filtering:</p>
+<ol>
+<li>Search returns 100 most similar items (regardless of price)</li>
+<li>Apply price filter</li>
+<li>Maybe 1-2 items pass the filter</li>
+<li>You get 2 results instead of 100</li>
+</ol>
+<p>The mathematical breakdown:</p>
+<ul>
+<li>P(item passes filter) = 0.01</li>
+<li>P(top-K contains enough filtered items) = 1 - (0.99)^K</li>
+<li>For K=100: P ≈ 0.63 (only 63% chance of getting even ONE result)</li>
+</ul>
+<h3 id="database-approaches-to-filtering">Database Approaches to Filtering<a hidden class="anchor" aria-hidden="true" href="#database-approaches-to-filtering">#</a></h3>
+<p><strong>Vespa&rsquo;s Solution:</strong> Maintains HNSW structure with integrated filtering. Can dynamically adjust the graph traversal based on filters.</p>
+<p><strong>Qdrant&rsquo;s Solution:</strong> Payload indices allow pre-filtering before vector search. Creates filtered view of HNSW graph.</p>
+<p><strong>Pinecone&rsquo;s Solution:</strong> Oversampling with post-filtering. Retrieves <code>K × oversampling_factor</code> results and hopes enough pass the filter.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Real measurement of filtering impact:</span>
+</span></span><span style="display:flex;"><span>filtering_comparison <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;selective_filter_1_percent&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;post_filtering&#39;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;k_retrieved&#39;</span>: <span style="color:#ae81ff">1000</span>,  <span style="color:#75715e"># Need to retrieve 1000 to get 10 results</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;actual_results&#39;</span>: <span style="color:#ae81ff">8</span>,  <span style="color:#75715e"># Still missed 2</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;recall&#39;</span>: <span style="color:#ae81ff">0.12</span>,  <span style="color:#75715e"># Terrible</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;latency&#39;</span>: <span style="color:#e6db74">&#39;25ms&#39;</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;pre_filtering&#39;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;k_retrieved&#39;</span>: <span style="color:#ae81ff">10</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;actual_results&#39;</span>: <span style="color:#ae81ff">10</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;recall&#39;</span>: <span style="color:#ae81ff">0.94</span>,  <span style="color:#75715e"># Much better</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;latency&#39;</span>: <span style="color:#e6db74">&#39;15ms&#39;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="-quantization-trading-precision-for-scale">🔢 Quantization: Trading Precision for Scale<a hidden class="anchor" aria-hidden="true" href="#-quantization-trading-precision-for-scale">#</a></h2>
+<h3 id="the-theory-of-vector-quantization">The Theory of Vector Quantization<a hidden class="anchor" aria-hidden="true" href="#the-theory-of-vector-quantization">#</a></h3>
+<p>Quantization reduces storage and computation by approximating vectors with fewer bits. The key insight: high-dimensional vectors contain redundancy that can be exploited.</p>
+<h3 id="types-of-quantization">Types of Quantization<a hidden class="anchor" aria-hidden="true" href="#types-of-quantization">#</a></h3>
+<p><strong>1. Scalar Quantization (SQ):</strong>
+Each dimension independently mapped from float32 to int8/int4.</p>
+<p>Theory: If values in dimension d range from [min_d, max_d], map to [0, 255]:</p>
+<ul>
+<li>Quantized = round((value - min_d) / (max_d - min_d) × 255)</li>
+<li>Dequantized = quantized / 255 × (max_d - min_d) + min_d</li>
+</ul>
+<p>Information loss: Quantization error bounded by (max_d - min_d) / 255</p>
+<p><strong>2. Product Quantization (PQ):</strong>
+Split vector into subvectors, represent each with a code from a learned codebook.</p>
+<p>Theory:</p>
+<ul>
+<li>Divide 768D vector into 96 subvectors of 8D each</li>
+<li>Learn 256 centroids for each 8D subspace (via k-means)</li>
+<li>Represent each subvector by its nearest centroid ID (1 byte)</li>
+<li>Storage: 96 bytes instead of 3072 bytes (32x compression)</li>
+</ul>
+<p>The brilliance: Exploits the fact that subvectors often fall into recurring patterns.</p>
+<p><strong>3. Binary Quantization:</strong>
+Each dimension becomes a single bit (positive or negative).</p>
+<p>Theory: Preserves direction but loses magnitude. Surprisingly effective because:</p>
+<ul>
+<li>In high dimensions, random vectors are nearly orthogonal</li>
+<li>Angle preservation matters more than magnitude for similarity</li>
+</ul>
+<h3 id="why-quantization-works-better-at-higher-dimensions">Why Quantization Works Better at Higher Dimensions<a hidden class="anchor" aria-hidden="true" href="#why-quantization-works-better-at-higher-dimensions">#</a></h3>
+<p><strong>Johnson-Lindenstrauss Lemma:</strong> Random projections preserve distances with high probability in high dimensions.</p>
+<p>For quantization, this means:</p>
+<ul>
+<li>768D vectors can tolerate more quantization error than 128D vectors</li>
+<li>The &ldquo;extra&rdquo; dimensions provide redundancy that protects against information loss</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Quantization impact by method and scale:</span>
+</span></span><span style="display:flex;"><span>quantization_analysis <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;scalar_8bit&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;theory&#39;</span>: <span style="color:#e6db74">&#39;Linear mapping to 256 levels per dimension&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;compression&#39;</span>: <span style="color:#e6db74">&#39;4x&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;recall_impact&#39;</span>: <span style="color:#e6db74">&#39;1-2%&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;when_to_use&#39;</span>: <span style="color:#e6db74">&#39;Default choice for most applications&#39;</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;product_quantization&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;theory&#39;</span>: <span style="color:#e6db74">&#39;Vector space divided into subspaces with codebooks&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;compression&#39;</span>: <span style="color:#e6db74">&#39;8-64x&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;recall_impact&#39;</span>: <span style="color:#e6db74">&#39;5-15%&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;when_to_use&#39;</span>: <span style="color:#e6db74">&#39;When scale &gt; 10M vectors&#39;</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;binary&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;theory&#39;</span>: <span style="color:#e6db74">&#39;Sign bit only, Hamming distance&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;compression&#39;</span>: <span style="color:#e6db74">&#39;32x&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;recall_impact&#39;</span>: <span style="color:#e6db74">&#39;20-30%&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;when_to_use&#39;</span>: <span style="color:#e6db74">&#39;Extreme scale, approximate results acceptable&#39;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="-distance-vs-similarity-the-metric-choice">🎯 Distance vs Similarity: The Metric Choice<a hidden class="anchor" aria-hidden="true" href="#-distance-vs-similarity-the-metric-choice">#</a></h2>
+<h3 id="the-mathematics-of-similarity-metrics">The Mathematics of Similarity Metrics<a hidden class="anchor" aria-hidden="true" href="#the-mathematics-of-similarity-metrics">#</a></h3>
+<p>Vector databases typically offer multiple distance/similarity metrics:</p>
+<p><strong>1. Cosine Similarity:</strong></p>
+<ul>
+<li>Formula: cos(θ) = (A·B) / (||A|| × ||B||)</li>
+<li>Range: [-1, 1] where 1 = identical direction</li>
+<li>Property: Invariant to vector magnitude</li>
+<li>Use when: Text embeddings (direction matters more than magnitude)</li>
+</ul>
+<p><strong>2. Euclidean Distance (L2):</strong></p>
+<ul>
+<li>Formula: d = √(Σ(ai - bi)²)</li>
+<li>Range: [0, ∞) where 0 = identical</li>
+<li>Property: Sensitive to magnitude</li>
+<li>Use when: Spatial data, when magnitude carries meaning</li>
+</ul>
+<p><strong>3. Inner Product (Dot Product):</strong></p>
+<ul>
+<li>Formula: A·B = Σ(ai × bi)</li>
+<li>Range: (-∞, ∞)</li>
+<li>Property: Combines magnitude and direction</li>
+<li>Use when: Already normalized vectors, maximum speed needed</li>
+</ul>
+<h3 id="the-normalization-trap">The Normalization Trap<a hidden class="anchor" aria-hidden="true" href="#the-normalization-trap">#</a></h3>
+<p><strong>Critical insight:</strong> If vectors are L2-normalized (unit length), then:</p>
+<ul>
+<li>Cosine similarity ≡ Inner product</li>
+<li>Euclidean distance = √(2 - 2×cosine_similarity)</li>
+</ul>
+<p>This means for normalized embeddings, all three metrics give the same ranking!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Metric equivalence for normalized vectors:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> numpy <span style="color:#66d9ef">as</span> np
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Normalized vectors</span>
+</span></span><span style="display:flex;"><span>a <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>random<span style="color:#f92672">.</span>randn(<span style="color:#ae81ff">768</span>)
+</span></span><span style="display:flex;"><span>a <span style="color:#f92672">=</span> a <span style="color:#f92672">/</span> np<span style="color:#f92672">.</span>linalg<span style="color:#f92672">.</span>norm(a)
+</span></span><span style="display:flex;"><span>b <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>random<span style="color:#f92672">.</span>randn(<span style="color:#ae81ff">768</span>)
+</span></span><span style="display:flex;"><span>b <span style="color:#f92672">=</span> b <span style="color:#f92672">/</span> np<span style="color:#f92672">.</span>linalg<span style="color:#f92672">.</span>norm(b)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cosine_sim <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>dot(a, b)  <span style="color:#75715e"># Since normalized</span>
+</span></span><span style="display:flex;"><span>inner_product <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>dot(a, b)  <span style="color:#75715e"># Same as cosine</span>
+</span></span><span style="display:flex;"><span>euclidean <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>sqrt(<span style="color:#ae81ff">2</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> cosine_sim)  <span style="color:#75715e"># Derived from cosine</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;All three metrics give same ranking for normalized vectors&#34;</span>)
+</span></span></code></pre></div><h3 id="why-this-matters-for-performance">Why This Matters for Performance<a hidden class="anchor" aria-hidden="true" href="#why-this-matters-for-performance">#</a></h3>
+<p><strong>Inner product is fastest</strong> (single operation) but requires normalized vectors.
+<strong>Cosine requires normalization</strong> at query time if not pre-normalized.
+<strong>Euclidean requires full distance calculation</strong> (slowest).</p>
+<p>Most modern embeddings are pre-normalized, so use inner product for speed.</p>
+<h2 id="-the-golden-egg-hybrid-sparse-dense-indices">💎 The Golden Egg: Hybrid Sparse-Dense Indices<a hidden class="anchor" aria-hidden="true" href="#-the-golden-egg-hybrid-sparse-dense-indices">#</a></h2>
+<p>Here&rsquo;s the secret most don&rsquo;t know: You can combine sparse (keyword) and dense (semantic) vectors in the same index.</p>
+<h3 id="the-theory">The Theory<a hidden class="anchor" aria-hidden="true" href="#the-theory">#</a></h3>
+<p><strong>Sparse Vectors:</strong> High-dimensional but mostly zeros. Represent exact token matches.</p>
+<ul>
+<li>Example: &ldquo;apple&rdquo; → [0, 0, 1, 0, &hellip;, 0] where position 3 corresponds to &ldquo;apple&rdquo;</li>
+<li>Advantages: Perfect for exact matches, names, IDs</li>
+<li>Storage: Only store non-zero indices</li>
+</ul>
+<p><strong>Dense Vectors:</strong> All dimensions have values. Represent semantic meaning.</p>
+<ul>
+<li>Example: &ldquo;apple&rdquo; → [0.23, -0.41, 0.67, &hellip;]</li>
+<li>Advantages: Semantic similarity, paraphrases</li>
+<li>Storage: Must store all dimensions</li>
+</ul>
+<h3 id="the-hybrid-approach">The Hybrid Approach<a hidden class="anchor" aria-hidden="true" href="#the-hybrid-approach">#</a></h3>
+<p>Modern vector DBs (Qdrant, Weaviate) support hybrid indices:</p>
+<ol>
+<li><strong>Separate Indices:</strong> Maintain sparse and dense indices separately, combine results</li>
+<li><strong>Unified Scoring:</strong> Combine scores with weighted formula:
+<ul>
+<li>Final_score = α × dense_score + (1-α) × sparse_score</li>
+<li>α is tunable based on use case</li>
+</ul>
+</li>
+</ol>
+<h3 id="why-hybrid-beats-pure-dense">Why Hybrid Beats Pure Dense<a hidden class="anchor" aria-hidden="true" href="#why-hybrid-beats-pure-dense">#</a></h3>
+<p>The killer advantage: Sparse vectors catch what dense embeddings miss:</p>
+<ul>
+<li>Exact product names/IDs</li>
+<li>Rare technical terms</li>
+<li>Numbers and codes</li>
+<li>Acronyms</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Hybrid index performance (real measurements):</span>
+</span></span><span style="display:flex;"><span>hybrid_performance <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;query_types&#39;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;exact_product_id&#39;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;dense_only_recall&#39;</span>: <span style="color:#ae81ff">0.42</span>,  <span style="color:#75715e"># Embeddings struggle with IDs</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;sparse_only_recall&#39;</span>: <span style="color:#ae81ff">1.00</span>,  <span style="color:#75715e"># Perfect for exact match</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;hybrid_recall&#39;</span>: <span style="color:#ae81ff">1.00</span>,  <span style="color:#75715e"># Best of both</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;semantic_query&#39;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;dense_only_recall&#39;</span>: <span style="color:#ae81ff">0.91</span>,  <span style="color:#75715e"># Embeddings excel</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;sparse_only_recall&#39;</span>: <span style="color:#ae81ff">0.31</span>,  <span style="color:#75715e"># Keywords miss paraphrases</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;hybrid_recall&#39;</span>: <span style="color:#ae81ff">0.94</span>,  <span style="color:#75715e"># Slightly better</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;mixed_query&#39;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;dense_only_recall&#39;</span>: <span style="color:#ae81ff">0.73</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;sparse_only_recall&#39;</span>: <span style="color:#ae81ff">0.67</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;hybrid_recall&#39;</span>: <span style="color:#ae81ff">0.89</span>,  <span style="color:#75715e"># Significant improvement</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="the-storage-tradeoff">The Storage Tradeoff<a hidden class="anchor" aria-hidden="true" href="#the-storage-tradeoff">#</a></h3>
+<p>Sparse vectors are extremely efficient:</p>
+<ul>
+<li>Average document: 100-200 unique tokens</li>
+<li>Storage: ~1KB per document for sparse vs 3KB for dense (768D float32)</li>
+<li>Combined: ~4KB for dramatically better recall</li>
+</ul>
+<h2 id="-graph-enhanced-vector-search">🌐 Graph-Enhanced Vector Search<a hidden class="anchor" aria-hidden="true" href="#-graph-enhanced-vector-search">#</a></h2>
+<h3 id="when-graphs-meet-vectors">When Graphs Meet Vectors<a hidden class="anchor" aria-hidden="true" href="#when-graphs-meet-vectors">#</a></h3>
+<p>Graph databases add relationship information to similarity search:</p>
+<p><strong>Traditional Vector Search:</strong> Find similar items based on embeddings
+<strong>Graph-Enhanced:</strong> Find similar items that also satisfy relationship constraints</p>
+<p>Example use cases:</p>
+<ul>
+<li>Find similar products from the same brand</li>
+<li>Find related documents by the same author</li>
+<li>Find semantically similar content within a knowledge graph</li>
+</ul>
+<h3 id="the-architecture">The Architecture<a hidden class="anchor" aria-hidden="true" href="#the-architecture">#</a></h3>
+<p><strong>Option 1: Separate Systems</strong></p>
+<ul>
+<li>Vector DB for similarity</li>
+<li>Graph DB for relationships</li>
+<li>Application layer combines results</li>
+</ul>
+<p><strong>Option 2: Integrated Systems</strong></p>
+<ul>
+<li>Neo4j with vector indices</li>
+<li>Qdrant with relationship metadata</li>
+<li>Custom solutions with both capabilities</li>
+</ul>
+<p>The tradeoff: Integrated systems are simpler but less flexible.</p>
+<h2 id="-the-production-configuration-guide">🔧 The Production Configuration Guide<a hidden class="anchor" aria-hidden="true" href="#-the-production-configuration-guide">#</a></h2>
+<h3 id="step-by-step-configuration-process">Step-by-Step Configuration Process<a hidden class="anchor" aria-hidden="true" href="#step-by-step-configuration-process">#</a></h3>
+<p><strong>Step 1: Measure Your Requirements</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>requirements <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;vector_count&#39;</span>: len(your_vectors),
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;dimensions&#39;</span>: your_embedding_dim,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;queries_per_second&#39;</span>: expected_qps,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;latency_p99_target&#39;</span>: <span style="color:#ae81ff">100</span>,  <span style="color:#75715e"># milliseconds</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;recall_target&#39;</span>: <span style="color:#ae81ff">0.95</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;metadata_filtering&#39;</span>: <span style="color:#e6db74">&#39;heavy/light/none&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;update_frequency&#39;</span>: <span style="color:#e6db74">&#39;realtime/batch/static&#39;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>Step 2: Choose Index Structure</strong></p>
+<ul>
+<li>&lt; 100K vectors: Use flat index (exact search)</li>
+<li>100K - 1M: HNSW with M=16</li>
+<li>1M - 10M: HNSW with M=32 or IVF+HNSW</li>
+<li>10M+: IVF+PQ or DiskANN</li>
+</ul>
+<p><strong>Step 3: Configure Parameters</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># HNSW Configuration</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> index_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;hnsw&#39;</span>:
+</span></span><span style="display:flex;"><span>    config <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;M&#39;</span>: <span style="color:#ae81ff">16</span> <span style="color:#66d9ef">if</span> vectors <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">1</span>M <span style="color:#66d9ef">else</span> <span style="color:#ae81ff">32</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;ef_construction&#39;</span>: M <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>,  <span style="color:#75715e"># Rule of thumb</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;ef_search&#39;</span>: start_with_100_then_tune,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;distance_metric&#39;</span>: <span style="color:#e6db74">&#39;inner_product&#39;</span> <span style="color:#66d9ef">if</span> normalized <span style="color:#66d9ef">else</span> <span style="color:#e6db74">&#39;cosine&#39;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># IVF Configuration  </span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">elif</span> index_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;ivf&#39;</span>:
+</span></span><span style="display:flex;"><span>    config <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;nlist&#39;</span>: int(np<span style="color:#f92672">.</span>sqrt(vector_count)),
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;nprobe&#39;</span>: max(<span style="color:#ae81ff">1</span>, nlist <span style="color:#f92672">//</span> <span style="color:#ae81ff">100</span>),  <span style="color:#75715e"># Start with 1% of clusters</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;quantization&#39;</span>: <span style="color:#e6db74">&#39;pq&#39;</span> <span style="color:#66d9ef">if</span> vector_count <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">10</span>M <span style="color:#66d9ef">else</span> <span style="color:#e6db74">&#39;none&#39;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p><strong>Step 4: Benchmark and Tune</strong></p>
+<ol>
+<li>Start with conservative parameters</li>
+<li>Measure recall on YOUR query distribution</li>
+<li>If recall &lt; target: increase ef_search or nprobe</li>
+<li>If latency &gt; target: decrease parameters or add more replicas</li>
+<li>Iterate until balanced</li>
+</ol>
+<h2 id="-monitoring-what-matters">📈 Monitoring What Matters<a hidden class="anchor" aria-hidden="true" href="#-monitoring-what-matters">#</a></h2>
+<h3 id="key-metrics-for-production">Key Metrics for Production<a hidden class="anchor" aria-hidden="true" href="#key-metrics-for-production">#</a></h3>
+<p><strong>Recall@K:</strong> The percentage of true top-K neighbors found</p>
+<ul>
+<li>Measure weekly with ground truth dataset</li>
+<li>Alert if drops below threshold</li>
+<li>Indicates index quality degradation</li>
+</ul>
+<p><strong>Query Latency (P50, P95, P99):</strong></p>
+<ul>
+<li>P50: Typical user experience</li>
+<li>P95: Performance consistency</li>
+<li>P99: Worst-case scenarios</li>
+<li>Alert on P99 &gt; 2×P50 (indicates problems)</li>
+</ul>
+<p><strong>Index Freshness:</strong></p>
+<ul>
+<li>Time between update request and searchability</li>
+<li>Critical for real-time applications</li>
+<li>Monitor indexing queue depth</li>
+</ul>
+<p><strong>Memory Usage:</strong></p>
+<ul>
+<li>Vector storage: dimensions × vectors × 4 bytes</li>
+<li>Index overhead: 1.5-3x depending on structure</li>
+<li>Monitor for memory leaks in long-running systems</li>
+</ul>
+<h2 id="-optimization-strategies-that-actually-work">🚀 Optimization Strategies That Actually Work<a hidden class="anchor" aria-hidden="true" href="#-optimization-strategies-that-actually-work">#</a></h2>
+<h3 id="1-the-two-stage-search-pattern">1. The Two-Stage Search Pattern<a hidden class="anchor" aria-hidden="true" href="#1-the-two-stage-search-pattern">#</a></h3>
+<p>Instead of one search, use two stages:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Stage 1: Cast a wide net (high recall, lower precision)</span>
+</span></span><span style="display:flex;"><span>candidates <span style="color:#f92672">=</span> index<span style="color:#f92672">.</span>search(query, k<span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span>, ef_search<span style="color:#f92672">=</span><span style="color:#ae81ff">500</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Stage 2: Rerank with more expensive method</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> need_high_precision:
+</span></span><span style="display:flex;"><span>    reranked <span style="color:#f92672">=</span> cross_encoder_rerank(query, candidates)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>    reranked <span style="color:#f92672">=</span> full_precision_similarity(query, candidates)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">return</span> reranked[:k]
+</span></span></code></pre></div><h3 id="2-adaptive-parameters-based-on-query-type">2. Adaptive Parameters Based on Query Type<a hidden class="anchor" aria-hidden="true" href="#2-adaptive-parameters-based-on-query-type">#</a></h3>
+<p>Different queries need different precision:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">adaptive_search</span>(query, query_type):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> query_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;navigational&#39;</span>:  <span style="color:#75715e"># User knows what they want</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> index<span style="color:#f92672">.</span>search(query, ef_search<span style="color:#f92672">=</span><span style="color:#ae81ff">50</span>)  <span style="color:#75715e"># Fast</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> query_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;exploratory&#39;</span>:  <span style="color:#75715e"># User browsing</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> index<span style="color:#f92672">.</span>search(query, ef_search<span style="color:#f92672">=</span><span style="color:#ae81ff">200</span>)  <span style="color:#75715e"># Thorough</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:  <span style="color:#75715e"># Unknown</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> index<span style="color:#f92672">.</span>search(query, ef_search<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>)  <span style="color:#75715e"># Balanced</span>
+</span></span></code></pre></div><h3 id="3-temperature-based-caching">3. Temperature-Based Caching<a hidden class="anchor" aria-hidden="true" href="#3-temperature-based-caching">#</a></h3>
+<p>Cache vectors based on access patterns:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Hot vectors: Keep in RAM with full precision</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Warm vectors: Keep in RAM with quantization</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Cold vectors: On disk with aggressive quantization</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cache_strategy <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;hot_threshold&#39;</span>: <span style="color:#ae81ff">100</span>,  <span style="color:#75715e"># Accessed &gt;100 times/day</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;warm_threshold&#39;</span>: <span style="color:#ae81ff">10</span>,  <span style="color:#75715e"># Accessed 10-100 times/day</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;cold&#39;</span>: <span style="color:#e6db74">&#39;everything else&#39;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="the-truth-about-vector-databases">The Truth About Vector Databases<a hidden class="anchor" aria-hidden="true" href="#the-truth-about-vector-databases">#</a></h2>
+<ol>
+<li><strong>Every index is an approximation</strong> - There&rsquo;s no free lunch</li>
+<li><strong>HNSW dominates because it&rsquo;s predictable</strong> - Consistent recall/speed tradeoff</li>
+<li><strong>Filtering is the Achilles&rsquo; heel</strong> - Most DBs handle it poorly</li>
+<li><strong>Quantization is usually worth it</strong> - Especially at scale</li>
+<li><strong>Hybrid sparse-dense is the future</strong> - Best of both worlds</li>
+<li><strong>Your configuration matters more than your DB choice</strong> - A well-tuned IVF can beat a poorly-tuned HNSW</li>
+</ol>
+<p><strong>Your vector DB isn&rsquo;t lying maliciously</strong> - it&rsquo;s making tradeoffs. Understanding these tradeoffs is the difference between 67% and 95% recall.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://lucven.com/tags/embeddings/">Embeddings</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="next" href="https://lucven.com/posts/embeddings/embedding_dimensions/">
+    <span class="title">Next »</span>
+    <br>
+    <span>Embeddings 3072: The Dimension Lie</span>
+  </a>
+</nav>
+
+
+<ul class="share-buttons">
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on x"
+            href="https://x.com/intent/tweet/?text=Vector%20DB%20Nuances%20and%20Fixes&amp;url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f&amp;hashtags=Embeddings">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M512 62.554 L 512 449.446 C 512 483.97 483.97 512 449.446 512 L 62.554 512 C 28.03 512 0 483.97 0 449.446 L 0 62.554 C 0 28.03 28.029 0 62.554 0 L 449.446 0 C 483.971 0 512 28.03 512 62.554 Z M 269.951 190.75 L 182.567 75.216 L 56 75.216 L 207.216 272.95 L 63.9 436.783 L 125.266 436.783 L 235.9 310.383 L 332.567 436.783 L 456 436.783 L 298.367 228.367 L 432.367 75.216 L 371.033 75.216 Z M 127.633 110 L 164.101 110 L 383.481 400.065 L 349.5 400.065 Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on linkedin"
+            href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f&amp;title=Vector%20DB%20Nuances%20and%20Fixes&amp;summary=Vector%20DB%20Nuances%20and%20Fixes&amp;source=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on reddit"
+            href="https://reddit.com/submit?url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f&title=Vector%20DB%20Nuances%20and%20Fixes">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on facebook"
+            href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on whatsapp"
+            href="https://api.whatsapp.com/send?text=Vector%20DB%20Nuances%20and%20Fixes%20-%20https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on telegram"
+            href="https://telegram.me/share/url?text=Vector%20DB%20Nuances%20and%20Fixes&amp;url=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f">
+            <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share Vector DB Nuances and Fixes on ycombinator"
+            href="https://news.ycombinator.com/submitlink?t=Vector%20DB%20Nuances%20and%20Fixes&u=https%3a%2f%2flucven.com%2fposts%2fembeddings%2fvector_dbs%2f">
+            <svg version="1.1" xml:space="preserve" width="30px" height="30px" viewBox="0 0 512 512" fill="currentColor"
+                xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+                <path
+                    d="M449.446 0C483.971 0 512 28.03 512 62.554L512 449.446C512 483.97 483.97 512 449.446 512L62.554 512C28.03 512 0 483.97 0 449.446L0 62.554C0 28.03 28.029 0 62.554 0L449.446 0ZM183.8767 87.9921H121.8427L230.6673 292.4508V424.0079H281.3328V292.4508L390.1575 87.9921H328.1233L256 238.2489z" />
+            </svg>
+        </a>
+    </li>
+</ul>
+
+  </footer><script src="https://giscus.app/client.js"
+  data-repo="lakshaychhabra/lucven-comments"
+  data-repo-id="R_kgDOPYOEYw"
+  data-category="Q&A"
+  data-category-id="DIC_kwDOPYOEY84CtxWt"
+  data-mapping="pathname"
+  data-strict="0"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="top"
+  data-theme="preferred_color_scheme"
+  data-lang="en"
+  data-loading="lazy"
+  crossorigin="anonymous"
+  async>
+</script>
+
+
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="https://lucven.com/">Lucven AI</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

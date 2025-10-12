@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Posts | Lucven AI</title>
+<meta name="keywords" content="">
+<meta name="description" content="Posts - Lucven AI">
+<meta name="author" content="Lakshay Chhabra">
+<link rel="canonical" href="https://lucven.com/posts/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.8fe10233a706bc87f2e08b3cf97b8bd4c0a80f10675a143675d59212121037c0.css" integrity="sha256-j&#43;ECM6cGvIfy4Is8&#43;XuL1MCoDxBnWhQ2ddWSEhIQN8A=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://lucven.com/favicon_io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://lucven.com/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://lucven.com/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://lucven.com/apple-touch-icon.png">
+<link rel="mask-icon" href="https://lucven.com/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="https://lucven.com/posts/index.xml">
+<link rel="alternate" hreflang="en" href="https://lucven.com/posts/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+</noscript>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MWZSVJK8P6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-MWZSVJK8P6');
+</script>
+
+
+<script>
+(function(){
+  const INTERVAL = 15000; 
+  let last = (document.visibilityState === 'visible' && document.hasFocus()) ? Date.now() : null;
+  let acc = 0, timer = null;
+  const active = () => document.visibilityState === 'visible' && document.hasFocus();
+
+  function start(){
+    if (!timer) timer = setInterval(beat, INTERVAL);
+    if (!last && active()) last = Date.now();
+  }
+  function stop(){
+    if (timer) { clearInterval(timer); timer = null; }
+    if (last) { acc += Date.now() - last; last = null; }
+  }
+  function beat(){
+    let ms = acc + (last ? Date.now() - last : 0);
+    if (ms <= 0) return;
+    if (window.gtag) gtag('event', 'active_time', {
+      active_seconds: Math.round(ms / 1000),
+      page_path: location.pathname
+    });
+    acc = 0;
+    if (last) last = Date.now();
+  }
+
+  document.addEventListener('visibilitychange', () => active() ? start() : stop());
+  window.addEventListener('focus', start);
+  window.addEventListener('blur', stop);
+  window.addEventListener('pagehide', beat);
+
+  if (active()) { last = Date.now(); start(); }
+})();
+</script>
+<meta property="og:url" content="https://lucven.com/posts/">
+  <meta property="og:site_name" content="Lucven AI">
+  <meta property="og:title" content="Posts">
+  <meta property="og:description" content="Exploring Retrieval-Augmented Generation (RAG), Machine Learning systems, and scalable AI infra.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Posts">
+<meta name="twitter:description" content="Exploring Retrieval-Augmented Generation (RAG), Machine Learning systems, and scalable AI infra.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://lucven.com/posts/"
+    }
+  ]
+}
+</script>
+</head>
+
+<body class="list dark" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://lucven.com/" accesskey="h" title="Lucven AI (Alt + H)">Lucven AI</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://lucven.com/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/posts/" title="Posts">
+                    <span class="active">Posts</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/archives/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://lucven.com/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="https://lucven.com/">Home</a></div>
+  <h1>
+    Posts
+  </h1>
+</header>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Vector DB Nuances and Fixes
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Your Vector DB Is Lying: The Index Structures Destroying Recall (And How to Fix It) “Your vector database promises 99% recall. You’re getting 67%. Here’s why every index structure makes tradeoffs, and how to choose the right one for YOUR use case.”
+TL;DR: Vector databases don’t store and search vectors the way you think. HNSW builds a navigation graph that can miss neighbors. IVF clusters can put similar vectors in different buckets. Metadata filtering happens AFTER search, destroying recall. This guide explains how each vector DB actually works, when to use which, and how to configure them properly.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-10-09 00:10:39 +0530 IST'>October 9, 2025</span>&nbsp;·&nbsp;13 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to Vector DB Nuances and Fixes" href="https://lucven.com/posts/embeddings/vector_dbs/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Embeddings 3072: The Dimension Lie
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>The Dimension Lie: Why Your 3072 D Embeddings Are Mostly Zeros (And How to Fix It) “You’re paying for 3072 dimensions. PCA reveals you’re using ~200. But here’s the twist - those extra dimensions aren’t useless, they’re insurance. Let me show you the math.”
+TL;DR: Your high-dimensional embeddings aren’t “mostly zeros” - they occupy all dimensions but with exponentially decaying variance and redundancy. Yes, you can compress them to 200-256 dimensions with minimal loss. No, companies aren’t stupid for shipping 3072D models - they’re optimizing for general purpose use. This guide shows you how to measure what YOU actually need and optimize accordingly.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-10-05 00:10:39 +0530 IST'>October 5, 2025</span>&nbsp;·&nbsp;14 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to Embeddings 3072: The Dimension Lie" href="https://lucven.com/posts/embeddings/embedding_dimensions/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">How Words Become Vectors: Embeddings Inside Transformers (Without Tears)
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>How Words Become Vectors: Embeddings Inside Transformers (Without Tears) “Your embedding API returns a vector. Here are the 12 disasters happening inside and the 5 you can actually fix.”
+TL;DR: Modern embedding libraries handle CLS pooling disasters for you. But they can’t fix anisotropy (vectors clustering in narrow cones), length bias (longer texts having systematically different magnitude distributions), or domain vocabulary collapse (subword tokenization destroying semantic units). This guide shows what’s breaking, what’s already fixed, and what you still need to handle.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-10-03 00:10:39 +0530 IST'>October 3, 2025</span>&nbsp;·&nbsp;11 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to How Words Become Vectors: Embeddings Inside Transformers (Without Tears)" href="https://lucven.com/posts/embeddings/embeddings_intro/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">How Spacing and Capitalization Randomly Change Your Model&#39;s Entire Personality
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>How Spacing and Capitalization Randomly Change Your Model’s Entire Personality Add a space before your prompt and watch GPT become 30% dumber. Write in ALL CAPS and suddenly it’s aggressive. Use “pls” instead of “please” and it becomes casual. This isn’t personality, it’s tokenization chaos triggering different training data pockets.
+TL;DR: &#34; Hello&#34; and “Hello” activate completely different neural pathways. “HELP” vs “help” vs “Help” pulls from different training contexts (emergency manuals vs casual chat vs formal documents). Your model doesn’t have moods, it has tokenization triggered personality disorders.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-09-08 00:10:39 +0530 IST'>September 8, 2025</span>&nbsp;·&nbsp;8 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to How Spacing and Capitalization Randomly Change Your Model&#39;s Entire Personality" href="https://lucven.com/posts/tokenization/tokenization_personality_trigger/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">How Tokenization Murders Your Model&#39;s Ability to Do Basic Math
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>How Tokenization Murders Your Model’s Ability to Do Basic Math GPT-4o can write Shakespeare but struggles with 4-digit multiplication. It’s not stupid, it literally can’t see numbers the way you do. “12345” might be [“123”, “45”] while “12346” is [“1”, “2346”]. Try doing math when numbers randomly shatter into chunks.
+TL;DR: Tokenizers split numbers inconsistently, making arithmetic nearly impossible. “9.11” &gt; “9.9” according to many models because “.11” and “.9” are different tokens. Your calculator app works. Your $100B language model doesn’t. This is why.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-09-07 00:10:39 +0530 IST'>September 7, 2025</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to How Tokenization Murders Your Model&#39;s Ability to Do Basic Math" href="https://lucven.com/posts/tokenization/tokenization_math/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Why Your Vector Database Thinks $AAPL Means Polish Batteries
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Why Your Vector Database Thinks $AAPL Means Polish Batteries Your $50K vector database is returning garbage results because “$AAPL” tokenizes as [&#34;$&#34;, “AA”, “PL”] and now has the embedding of “dollar &#43; AA batteries &#43; Poland”. Your semantic search for “Apple stock” returns articles about Polish currency. This isn’t a retrieval problem, it’s tokenization murdering your embeddings.
+TL;DR: Bad tokenization creates noisy embeddings. “COVID-19” split into [“CO”, “VID”, “-”, “19”] has embeddings mixing “Colorado”, “video”, “negative”, and “2019”. Your RAG pipeline is doomed before it starts. Fix tokenization or waste money on larger models trying to compensate.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-09-06 00:10:39 +0530 IST'>September 6, 2025</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to Why Your Vector Database Thinks $AAPL Means Polish Batteries" href="https://lucven.com/posts/tokenization/tokenisation_limits/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Tokenization Forensics about Leaks
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Tokenization Leaks the Training Set (The Forensics Goldmine) Want to know if GPT-4 was trained on your company’s leaked data? Check if your internal codenames are single tokens. Want to detect if a model saw specific Reddit posts? The tokenizer already told you.
+TL;DR: Tokenizers are accidental forensic evidence. If SolidGoldMagikarp is a single token, that string appeared thousands of times in training. This is how researchers discovered GPT models trained on specific Reddit users, leaked databases, and private codebases.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-09-03 00:10:39 +0530 IST'>September 3, 2025</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to Tokenization Forensics about Leaks" href="https://lucven.com/posts/tokenization/forensics/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Byte Level Tokenizer
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Byte-Level Tokenizers Can Bloat Non-English (The Colonial Tax) Hook: Your Hindi users pay 17x more than English users for the same word. Your Arabic users’ prompts fail because they hit token limits 8x faster. This isn’t a bug—it’s algorithmic colonialism baked into your tokenizer.
+TL;DR: Tokenizers trained on English-heavy data punish non-Latin scripts with massive token inflation. “Internationalization” = 1 token in English, 17 tokens in Hindi. Your global users are subsidizing your English users, and they’re getting worse model performance too.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-09-02 00:10:39 +0530 IST'>September 2, 2025</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to Byte Level Tokenizer" href="https://lucven.com/posts/tokenization/byte-level-tokenizer/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Tokenisation: Why 90% of LLM Failures Start Here
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>The Tokenization Papers: Why 90% of LLM Failures Start Here The Hidden Layer That Controls Everything Every prompt you send to GPT, Claude, or Gemini gets shredded into tokens before the model even “thinks.” These aren’t words — they’re compression artifacts from 2021 web crawls that now dictate:
+Your API bill (why Hindi costs 17x more than English) Your model’s IQ (why it thinks 9.11 &gt; 9.9) Your RAG accuracy (why $AAPL returns articles about Polish batteries) Tokenization is the silent killer of production AI systems. These papers expose the disasters hiding in plain sight.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-09-01 22:09:00 +0530 IST'>September 1, 2025</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to Tokenisation: Why 90% of LLM Failures Start Here" href="https://lucven.com/posts/tokenization/tokenization/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">The Tokenization Decision Tree: When to Train, When to Run, When to Cry
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>The Tokenization Decision Tree: When to Train, When to Run, When to Cry Hook: A biotech company spent $2M training a custom medical tokenizer for their revolutionary drug discovery model. Six months later, they switched to GPT-4 with a 500-line preprocessing script. It performed better. Their custom tokenizer? Now it’s a $2M reminder that sometimes the “right” solution is the wrong solution.
+TL;DR: Training your own tokenizer means training your own model ($10M minimum). Extending tokenizers breaks everything. Most “tokenization problems” are solved better with preprocessing hacks than proper solutions. Here’s the decision tree that will save you millions and your sanity.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-08-31 22:09:00 +0530 IST'>August 31, 2025</span>&nbsp;·&nbsp;8 min&nbsp;·&nbsp;Lakshay Chhabra</footer>
+  <a class="entry-link" aria-label="post link to The Tokenization Decision Tree: When to Train, When to Run, When to Cry" href="https://lucven.com/posts/tokenization/training/"></a>
+</article>
+<footer class="page-footer">
+  <nav class="pagination">
+    <a class="next" href="https://lucven.com/posts/page/2/">Next&nbsp;&nbsp;»
+    </a>
+  </nav>
+</footer>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="https://lucven.com/">Lucven AI</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>
